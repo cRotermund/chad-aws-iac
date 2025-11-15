@@ -26,6 +26,15 @@ locals {
   effective_subnet_ids = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
 }
 
+# Elastic IP for nginx ingress
+resource "aws_eip" "nginx" {
+  domain = "vpc"
+  tags = merge(var.tags, {
+    Name = "nginx-ingress-eip"
+  })
+}
+
+# The k3s cluster module
 module "k3s" {
   source                   = "./modules/k3s-cluster"
   vpc_id                   = data.aws_vpc.existing.id
@@ -38,4 +47,18 @@ module "k3s" {
   tags                     = var.tags
   key_name                 = var.key_name
   ssh_allowed_cidrs        = var.ssh_allowed_cidrs
+}
+
+# The nginx ingress module
+module "nginx_ingress" {
+  source = "./modules/nginx-ingress"
+
+  vpc_id                = data.aws_vpc.existing.id
+  subnet_id             = local.effective_subnet_ids[0]
+  instance_type         = var.nginx_instance_type
+  eip_allocation_id     = aws_eip.nginx.allocation_id
+  k3s_server_private_ip = module.k3s.server_private_ip
+  key_name              = var.key_name
+  ssh_allowed_cidrs     = var.ssh_allowed_cidrs
+  tags                  = var.tags
 }

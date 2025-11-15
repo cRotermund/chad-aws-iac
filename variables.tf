@@ -66,3 +66,10 @@ variable "ssm_kubeconfig_name" {
   type        = string
   default     = "/k3s/cluster/kubeconfig"
 }
+
+# nginx ingress variables
+variable "nginx_instance_type" {
+  description = "Instance type for the nginx ingress node"
+  type        = string
+  default     = "t4g.micro"
+}

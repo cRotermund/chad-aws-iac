@@ -54,3 +54,29 @@ output "kubeconfig_ssm_parameter_name" {
   description = "Name of SSM parameter holding kubeconfig"
   value       = var.ssm_kubeconfig_name
 }
+
+# nginx ingress outputs
+output "nginx_eip" {
+  description = "Elastic IP address for nginx ingress (static)"
+  value       = aws_eip.nginx.public_ip
+}
+
+output "nginx_eip_allocation_id" {
+  description = "Allocation ID of the nginx Elastic IP"
+  value       = aws_eip.nginx.allocation_id
+}
+
+output "nginx_instance_id" {
+  description = "Instance ID of nginx ingress node"
+  value       = module.nginx_ingress.instance_id
+}
+
+output "nginx_public_ip" {
+  description = "Public IP address of nginx ingress node (static EIP)"
+  value       = module.nginx_ingress.public_ip
+}
+
+output "nginx_security_group_id" {
+  description = "Security group ID for nginx ingress"
+  value       = module.nginx_ingress.security_group_id
+}

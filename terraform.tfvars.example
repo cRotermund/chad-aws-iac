@@ -28,6 +28,7 @@ ssm_token_name = "your-k3s-token-ssm-parameter-name"
 # Optional overrides (leave defaults if fine)
 # k3s_server_instance_type = "t4g.small"
 # k3s_agent_instance_type  = "t4g.small"
+# nginx_instance_type      = "t4g.micro"
 
 # Optional tag overrides (merged with defaults). Uncomment to customize.
 # tags = {
