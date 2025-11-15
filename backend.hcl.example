@@ -1,0 +1,14 @@
+bucket         = "REPLACE_BUCKET_NAME"
+key            = "state/terraform.tfstate"
+region         = "us-east-1"
+use_lockfile   = "true"
+encrypt        = true
+
+# Usage:
+# 1. Copy to backend.hcl (gitignored)
+# 2. Fill real bucket and table names
+# 3. Run: terraform init -backend-config=backend.hcl
+# If you change values later: terraform init -reconfigure -backend-config=backend.hcl
+
+# Note: These values are not secrets (no access keys here). Keeping them out of version control
+# simply avoids easy external enumeration of your infra names.

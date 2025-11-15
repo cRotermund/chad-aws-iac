@@ -1,0 +1,38 @@
+# Usage: terraform.tfvars.example -> terraform.tfvars
+# Copy this file and fill in your personal values.
+
+# Personal variable values (ignored by git). Fill with real IDs/tokens.
+# Replace all placeholders before running 'terraform plan'.
+
+# Existing VPC ID you want to reference (or later import)
+vpc_id = "vpc-xyzreplacewithrealid"
+
+# Two existing public subnet IDs used for k3s nodes
+public_subnet_ids = [
+    "subnet-xyzreplacewithrealid1",
+    "subnet-xyzreplacewithrealid2",
+    "subnet-xyzreplacewithrealid3",
+    "subnet-xyzreplacewithrealid4",
+    "subnet-xyzreplacewithrealid5",
+    "subnet-xyzreplacewithrealid6"
+]
+
+key_name = "your-ssh-keypair-name-here"
+
+# Workstation's IP for SSH access
+ssh_allowed_cidrs = ["your.ip.address.here/32"]
+
+# k3s cluster join token SSM parameter name
+ssm_token_name = "your-k3s-token-ssm-parameter-name"
+
+# Optional overrides (leave defaults if fine)
+# k3s_server_instance_type = "t4g.small"
+# k3s_agent_instance_type  = "t4g.small"
+
+# Optional tag overrides (merged with defaults). Uncomment to customize.
+# tags = {
+#   Owner       = "chad"
+#   Project     = "infra"
+#   Environment = "single"
+#   ManagedBy   = "terraform"
+# }

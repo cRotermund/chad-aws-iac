@@ -1,0 +1,6 @@
+[profile terraform-iac]
+# Region used by Terraform operations (keep in sync with var.aws_region)
+region = us-east-1
+output = json
+
+# Copy this file to aws-config (without .example) and adjust if needed.
