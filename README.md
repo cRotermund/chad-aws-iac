@@ -189,8 +189,9 @@ The `scripts/` directory contains convenient helper scripts:
 |--------|---------|
 | `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
-| `start-cluster.sh` | Start all K3s instances (after stopping them) |
-| `stop-cluster.sh` | Stop K3s instances to save costs |
+| `get-argocd-password.sh` | Retrieve ArgoCD admin password |
+| `start-cluster.sh` | Start all instances (K3s + nginx) |
+| `stop-cluster.sh` | Stop all instances to save costs |
 | `ssh-k3s-server.sh` | SSH into the K3s server node |
 | `ssh-k3s-agent.sh` | SSH into the K3s agent node |
 | `ssh-nginx.sh` | SSH into the nginx ingress node |
@@ -290,6 +291,73 @@ sudo tail -f /var/log/nginx/error.log
 - **Separation:** Keep ingress concerns separate from the cluster
 
 **Default configuration:** The nginx instance is pre-configured to proxy HTTP traffic from port 80 to the K3s server's private IP. You can customize the config for HTTPS, additional backends, or advanced features.
+
+### ArgoCD GitOps
+
+ArgoCD is automatically installed on the K3s server during first boot for GitOps-based application deployment. It's accessible at **http://admin.rotorlabs.io/argocd** via the nginx reverse proxy.
+
+**Access ArgoCD UI:**
+
+```bash
+# Ensure your DNS points admin.rotorlabs.io to your nginx server's Elastic IP
+# Get the admin password
+./scripts/get-argocd-password.sh
+
+# Open in browser
+http://admin.rotorlabs.io/argocd
+```
+- Username: `admin`
+- Password: Retrieved from script above
+
+**Or access password via Terraform outputs:**
+```bash
+terraform output -raw argocd_admin_password
+```
+
+**What ArgoCD provides:**
+- **GitOps workflow:** Declare your applications in Git, ArgoCD deploys them
+- **Automated sync:** Keeps cluster state in sync with Git repository
+- **Rollback capability:** Easy rollback to previous versions
+- **Multi-environment:** Manage dev/staging/prod from one place
+
+**Getting started with ArgoCD:**
+
+1. **Install ArgoCD CLI** (optional but recommended):
+   ```bash
+   # macOS
+   brew install argocd
+   
+   # Linux
+   curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+   chmod +x /usr/local/bin/argocd
+   ```
+
+2. **Login via CLI:**
+   ```bash
+   # Via nginx (HTTP)
+   argocd login admin.rotorlabs.io:80 --username admin --password $(terraform output -raw argocd_admin_password) --insecure --grpc-web
+   ```
+
+3. **Create your first application:**
+   ```bash
+   argocd app create my-app \
+     --repo https://github.com/your-org/your-repo \
+     --path k8s \
+     --dest-server https://kubernetes.default.svc \
+     --dest-namespace default
+   ```
+
+4. **Sync the application:**
+   ```bash
+   argocd app sync my-app
+   ```
+
+**Important:** This infrastructure repo installs ArgoCD as platform tooling. Your actual application manifests should live in separate Git repositories that ArgoCD references.
+
+**Change the default password:**
+```bash
+argocd account update-password --current-password $(terraform output -raw argocd_admin_password)
+```
 
 ## Key Features & Design Decisions
 

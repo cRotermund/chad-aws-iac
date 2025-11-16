@@ -50,3 +50,14 @@ variable "ssm_kubeconfig_name" {
   description = "SSM parameter name to store exported kubeconfig (e.g. /k3s/cluster/kubeconfig)"
   type        = string
 }
+
+variable "nginx_security_group_id" {
+  description = "Security group ID of nginx ingress to allow traffic to K3s NodePorts"
+  type        = string
+  default     = ""
+}
+
+variable "ssm_argocd_password_name" {
+  description = "SSM parameter name to store ArgoCD initial admin password (e.g. /k3s/argocd/password)"
+  type        = string
+}

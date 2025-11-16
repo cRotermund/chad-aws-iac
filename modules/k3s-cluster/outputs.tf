@@ -37,3 +37,8 @@ output "kubeconfig_ssm_parameter_name" {
   description = "Name of the SSM parameter storing the kubeconfig"
   value       = aws_ssm_parameter.kubeconfig_placeholder.name
 }
+
+output "argocd_password_ssm_parameter_name" {
+  description = "Name of the SSM parameter storing the ArgoCD admin password"
+  value       = aws_ssm_parameter.argocd_password_placeholder.name
+}

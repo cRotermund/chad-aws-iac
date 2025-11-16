@@ -55,6 +55,29 @@ output "kubeconfig_ssm_parameter_name" {
   value       = var.ssm_kubeconfig_name
 }
 
+# ArgoCD outputs
+data "aws_ssm_parameter" "argocd_password" {
+  name            = var.ssm_argocd_password_name
+  with_decryption = true
+  depends_on      = [module.k3s]
+}
+
+output "argocd_admin_password" {
+  description = "ArgoCD initial admin password. Retrieve with: terraform output -raw argocd_admin_password"
+  value       = data.aws_ssm_parameter.argocd_password.value
+  sensitive   = true
+}
+
+output "argocd_server_url" {
+  description = "ArgoCD server URL (accessible via nginx reverse proxy)"
+  value       = "http://admin.rotorlabs.io/argocd"
+}
+
+output "argocd_ssm_parameter_name" {
+  description = "Name of SSM parameter holding ArgoCD admin password"
+  value       = var.ssm_argocd_password_name
+}
+
 # nginx ingress outputs
 output "nginx_eip" {
   description = "Elastic IP address for nginx ingress (static)"

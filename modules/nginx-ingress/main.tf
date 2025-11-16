@@ -79,60 +79,9 @@ data "aws_ami" "amazon_linux_arm" {
 }
 
 locals {
-  user_data_nginx = <<-EOT
-    #!/bin/bash
-    set -euo pipefail
-    
-    # Install nginx
-    dnf install -y nginx
-    
-    # Basic nginx config for load balancing to k3s
-    # This is a starter config - customize based on your needs
-    cat > /etc/nginx/conf.d/k3s-proxy.conf <<'EOF'
-    upstream k3s_backend {
-        server ${var.k3s_server_private_ip}:80;
-        # Add more k3s nodes here as needed
-    }
-    
-    server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
-        server_name _;
-        
-        location / {
-            proxy_pass http://k3s_backend;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
-    
-    # HTTPS placeholder - configure SSL certificates as needed
-    # server {
-    #     listen 443 ssl http2;
-    #     listen [::]:443 ssl http2;
-    #     server_name _;
-    #     
-    #     # ssl_certificate /path/to/cert.pem;
-    #     # ssl_certificate_key /path/to/key.pem;
-    #     
-    #     location / {
-    #         proxy_pass http://k3s_backend;
-    #         proxy_set_header Host $host;
-    #         proxy_set_header X-Real-IP $remote_addr;
-    #         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    #         proxy_set_header X-Forwarded-Proto $scheme;
-    #     }
-    # }
-    EOF
-    
-    # Enable and start nginx
-    systemctl enable nginx
-    systemctl start nginx
-    
-    echo "nginx installed and configured" > /var/log/nginx-install.log
-  EOT
+  user_data_nginx = templatefile("${path.module}/user_data/nginx.sh", {
+    k3s_server_private_ip = var.k3s_server_private_ip
+  })
 }
 
 resource "aws_instance" "nginx" {
@@ -142,6 +91,7 @@ resource "aws_instance" "nginx" {
   vpc_security_group_ids = [aws_security_group.nginx.id]
   key_name               = var.key_name != "" ? var.key_name : null
   user_data              = local.user_data_nginx
+  user_data_replace_on_change = true
 
   tags = merge(var.tags, {
     Name      = "nginx-ingress"

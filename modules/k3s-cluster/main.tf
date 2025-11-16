@@ -46,6 +46,18 @@ resource "aws_security_group_rule" "egress_all" {
 	description       = "Allow all outbound"
 }
 
+# Allow nginx ingress to reach K3s NodePorts (if nginx security group provided)
+resource "aws_security_group_rule" "nginx_to_nodeports" {
+	count                    = var.nginx_security_group_id != "" ? 1 : 0
+	type                     = "ingress"
+	security_group_id        = aws_security_group.k3s.id
+	from_port                = 30000
+	to_port                  = 32767
+	protocol                 = "tcp"
+	source_security_group_id = var.nginx_security_group_id
+	description              = "Allow nginx ingress to reach K3s NodePorts"
+}
+
 ############################################################
 # k3s cluster joining token, kubeconfig and SSM parameters
 ############################################################
@@ -72,6 +84,16 @@ resource "aws_ssm_parameter" "kubeconfig_placeholder" {
   value       = "PENDING"
   overwrite   = true
   description = "k3s kubeconfig (initial placeholder, replaced by server user_data)"
+  tags        = var.tags
+}
+
+# Placeholder ArgoCD admin password parameter (will be overwritten by user_data after ArgoCD installs)
+resource "aws_ssm_parameter" "argocd_password_placeholder" {
+  name        = var.ssm_argocd_password_name
+  type        = "SecureString"
+  value       = "PENDING"
+  overwrite   = true
+  description = "ArgoCD initial admin password (replaced by server user_data)"
   tags        = var.tags
 }
 
@@ -109,6 +131,11 @@ resource "aws_iam_role_policy" "k3s_ssm_access" {
 				Effect = "Allow"
 				Action = ["ssm:PutParameter", "ssm:GetParameter"],
 				Resource = aws_ssm_parameter.kubeconfig_placeholder.arn
+			},
+			{
+				Effect = "Allow"
+				Action = ["ssm:PutParameter", "ssm:GetParameter"],
+				Resource = aws_ssm_parameter.argocd_password_placeholder.arn
 			}
 		]
 	})
@@ -137,33 +164,11 @@ data "aws_ami" "amazon_linux_arm" {
 
 locals {
 	server_subnet_id = length(var.subnet_ids) > 0 ? var.subnet_ids[0] : null
-	user_data_server = <<-EOT
-		#!/bin/bash
-		set -euo pipefail
-		command -v aws >/dev/null 2>&1 || (dnf install -y awscli || yum install -y awscli)
-		TOKEN=$(aws ssm get-parameter --name ${var.ssm_token_name} --with-decryption --query Parameter.Value --output text)
-		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN" sh -
-		echo "k3s server installed (SSM token)" > /var/log/k3s-install.log
-		
-		# Wait for k3s to be ready (kubeconfig file exists and is valid)
-		echo "Waiting for k3s to be ready..."
-		for i in {1..30}; do
-			if [ -f /etc/rancher/k3s/k3s.yaml ] && kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get nodes &>/dev/null; then
-				echo "k3s is ready!"
-				break
-			fi
-			echo "Waiting for k3s... attempt $i/30"
-			sleep 10
-		done
-		
-		# Export kubeconfig to SSM so Terraform can read it later.
-		# Replace 127.0.0.1 with this node's public IP for external access.
-		PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-		cp /etc/rancher/k3s/k3s.yaml /tmp/kubeconfig
-		sed -i "s/127.0.0.1/$${PUBLIC_IP}/" /tmp/kubeconfig
-		aws ssm put-parameter --name ${var.ssm_kubeconfig_name} --type SecureString --overwrite --value "$(cat /tmp/kubeconfig)" || true
-		echo "Kubeconfig uploaded to SSM" >> /var/log/k3s-install.log
-	EOT
+	user_data_server = templatefile("${path.module}/user_data/server.sh", {
+		ssm_token_name            = var.ssm_token_name
+		ssm_kubeconfig_name       = var.ssm_kubeconfig_name
+		ssm_argocd_password_name  = var.ssm_argocd_password_name
+	})
 }
 
 resource "aws_instance" "server" {
@@ -173,6 +178,7 @@ resource "aws_instance" "server" {
 	vpc_security_group_ids = [aws_security_group.k3s.id]
 	key_name               = var.key_name != "" ? var.key_name : null
 	user_data              = local.user_data_server
+	user_data_replace_on_change = true
 	iam_instance_profile   = aws_iam_instance_profile.k3s_nodes.name
 
 	tags = merge(var.tags, {
@@ -195,14 +201,10 @@ resource "aws_eip_association" "server_eip" {
 
 locals {
 	agent_subnet_id = length(var.subnet_ids) > 1 ? var.subnet_ids[1] : local.server_subnet_id
-	user_data_agent = <<-EOT
-		#!/bin/bash
-		set -euo pipefail
-		command -v aws >/dev/null 2>&1 || (dnf install -y awscli || yum install -y awscli)
-		TOKEN=$(aws ssm get-parameter --name ${var.ssm_token_name} --with-decryption --query Parameter.Value --output text)
-		curl -sfL https://get.k3s.io | K3S_URL="https://${aws_instance.server.private_ip}:6443" K3S_TOKEN="$TOKEN" sh -
-		echo "k3s agent installed (SSM token)" > /var/log/k3s-agent-install.log
-	EOT
+	user_data_agent = templatefile("${path.module}/user_data/agent.sh", {
+		ssm_token_name         = var.ssm_token_name
+		k3s_server_private_ip  = aws_instance.server.private_ip
+	})
 }
 
 resource "aws_instance" "agent" {
@@ -212,6 +214,8 @@ resource "aws_instance" "agent" {
 	vpc_security_group_ids = [aws_security_group.k3s.id]
 	key_name               = var.key_name != "" ? var.key_name : null
 	user_data              = local.user_data_agent
+	user_data_replace_on_change = true
+	iam_instance_profile   = aws_iam_instance_profile.k3s_nodes.name
 
 	tags = merge(var.tags, {
 		Name      = "k3s-agent"
@@ -219,7 +223,6 @@ resource "aws_instance" "agent" {
 		Component = "k3s"
 	})
 
-	iam_instance_profile   = aws_iam_instance_profile.k3s_nodes.name
 	depends_on = [aws_instance.server]
 }
 

@@ -67,6 +67,12 @@ variable "ssm_kubeconfig_name" {
   default     = "/k3s/cluster/kubeconfig"
 }
 
+variable "ssm_argocd_password_name" {
+  description = "SSM SecureString parameter name to store ArgoCD initial admin password (will be created and overwritten by server user data)."
+  type        = string
+  default     = "/k3s/argocd/password"
+}
+
 # nginx ingress variables
 variable "nginx_instance_type" {
   description = "Instance type for the nginx ingress node"

@@ -44,6 +44,8 @@ module "k3s" {
   server_eip_allocation_id = var.k3s_server_eip_allocation_id
   ssm_token_name           = var.ssm_token_name
   ssm_kubeconfig_name      = var.ssm_kubeconfig_name
+  ssm_argocd_password_name = var.ssm_argocd_password_name
+  nginx_security_group_id  = module.nginx_ingress.security_group_id
   tags                     = var.tags
   key_name                 = var.key_name
   ssh_allowed_cidrs        = var.ssh_allowed_cidrs
