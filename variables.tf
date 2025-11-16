@@ -17,13 +17,13 @@ variable "public_subnet_ids" {
 variable "k3s_server_instance_type" {
   description = "Instance type for the k3s server node"
   type        = string
-  default     = "t4g.small"
+  default     = "t4g.medium"
 }
 
 variable "k3s_agent_instance_type" {
   description = "Instance type for the k3s agent node"
   type        = string
-  default     = "t4g.small"
+  default     = "t4g.medium"
 }
 
 variable "tags" {

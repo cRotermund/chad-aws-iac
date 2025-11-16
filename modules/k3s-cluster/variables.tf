@@ -1,10 +1,18 @@
-variable "vpc_id" { type = string }
+variable "vpc_id" { 
+  type = string 
+}
 
-variable "subnet_ids" { type = list(string) }
+variable "subnet_ids" {
+   type = list(string) 
+}
 
-variable "server_instance_type" { type = string }
+variable "server_instance_type" { 
+  type = string 
+}
 
-variable "agent_instance_type" { type = string }
+variable "agent_instance_type" { 
+  type = string 
+}
 
 variable "server_eip_allocation_id" { 
     type = string 
@@ -17,7 +25,9 @@ variable "cluster_token_length" {
   default     = 40
 }
 
-variable "tags" { type = map(string) }
+variable "tags" { 
+  type = map(string) 
+}
 
 variable "ssh_allowed_cidrs" {
   description = "List of CIDR blocks allowed SSH access (e.g. your workstation IP /32). Leave empty to disable SSH ingress."

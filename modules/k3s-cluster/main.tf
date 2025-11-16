@@ -144,12 +144,25 @@ locals {
 		TOKEN=$(aws ssm get-parameter --name ${var.ssm_token_name} --with-decryption --query Parameter.Value --output text)
 		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN" sh -
 		echo "k3s server installed (SSM token)" > /var/log/k3s-install.log
+		
+		# Wait for k3s to be ready (kubeconfig file exists and is valid)
+		echo "Waiting for k3s to be ready..."
+		for i in {1..30}; do
+			if [ -f /etc/rancher/k3s/k3s.yaml ] && kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get nodes &>/dev/null; then
+				echo "k3s is ready!"
+				break
+			fi
+			echo "Waiting for k3s... attempt $i/30"
+			sleep 10
+		done
+		
 		# Export kubeconfig to SSM so Terraform can read it later.
 		# Replace 127.0.0.1 with this node's public IP for external access.
 		PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 		cp /etc/rancher/k3s/k3s.yaml /tmp/kubeconfig
 		sed -i "s/127.0.0.1/$${PUBLIC_IP}/" /tmp/kubeconfig
 		aws ssm put-parameter --name ${var.ssm_kubeconfig_name} --type SecureString --overwrite --value "$(cat /tmp/kubeconfig)" || true
+		echo "Kubeconfig uploaded to SSM" >> /var/log/k3s-install.log
 	EOT
 }
 

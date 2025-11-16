@@ -151,6 +151,52 @@ The deployment will:
 
 ## Usage
 
+### Initial Workspace Setup
+
+After cloning this repository on a new machine:
+
+1. **Configure AWS credentials:**
+   Ensure you have the AWS access keys configured for the `terraform-iac` profile. These credentials must be obtained through a secure distribution method (1Password, secure file share, etc.). Place them in your `aws-credentials` file in the repository root:
+   ```ini
+   [terraform-iac]
+   aws_access_key_id = YOUR_ACCESS_KEY_ID
+   aws_secret_access_key = YOUR_SECRET_ACCESS_KEY
+   ```
+   **Note:** The `aws-credentials` file is gitignored and must be set up manually on each machine.
+
+2. **Set up AWS environment variables:**
+   ```bash
+   source ./scripts/init.sh
+   ```
+   This exports `AWS_PROFILE` and `AWS_REGION` so you don't need to specify them in every command.
+
+3. **Ensure you have the SSH key:**
+   The EC2 key pair private key (`chad-k3s.pem`) is not stored in AWS. You'll need to obtain it through your secure distribution method (1Password, secure file share, etc.) and place it at `~/chad-k3s.pem` with proper permissions:
+   ```bash
+   chmod 600 ~/chad-k3s.pem
+   ```
+
+4. **Initialize Terraform:**
+   ```bash
+   terraform init -backend-config=backend.hcl
+   ```
+
+### Helper Scripts
+
+The `scripts/` directory contains convenient helper scripts:
+
+| Script | Purpose |
+|--------|---------|
+| `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
+| `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
+| `start-cluster.sh` | Start all K3s instances (after stopping them) |
+| `stop-cluster.sh` | Stop K3s instances to save costs |
+| `ssh-k3s-server.sh` | SSH into the K3s server node |
+| `ssh-k3s-agent.sh` | SSH into the K3s agent node |
+| `ssh-nginx.sh` | SSH into the nginx ingress node |
+
+**Note:** Start/stop scripts only manage K3s nodes. The nginx instance can be stopped manually if needed via AWS Console or CLI.
+
 ### Accessing the Cluster
 
 Fetch the kubeconfig from SSM:
