@@ -1,0 +1,41 @@
+# OpenSSL Configuration Template for CSR Generation
+# 
+# This template is used by generate-csr.sh to create Certificate Signing Requests
+# Customize the [dn] section with your organization details
+
+[req]
+default_bits       = 2048
+default_keyfile    = private.key
+distinguished_name = dn
+req_extensions     = req_ext
+prompt             = no
+
+[dn]
+# Country Code (2 letter code)
+C = US
+
+# State or Province
+ST = North Carolina
+
+# City/Locality
+L = Raleigh
+
+# Organization/Company Name
+O = Royerstudio LLC
+
+# Organizational Unit (optional, can be department name)
+OU = HomeLabs
+
+# Common Name - THIS WILL BE REPLACED BY SCRIPT
+# For single domain: yourdomain.com
+# For wildcard: *.yourdomain.com
+CN = apps.rotorlabs.io
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+# Subject Alternative Names (SAN)
+DNS.1 = apps.rotorlabs.io
+DNS.2 = apis.rotorlabs.io
+DNS.3 = admin.rotorlabs.io

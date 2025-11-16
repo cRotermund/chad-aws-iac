@@ -1,0 +1,28 @@
+# Ignore all certificate-related files to prevent committing secrets
+
+# Private keys
+*.key
+*.pem
+
+# Certificate Signing Requests
+*.csr
+
+# Certificates
+*.crt
+*.cer
+*.cert
+
+# Certificate bundles
+*.ca-bundle
+*.fullchain.pem
+*.chain.pem
+
+# Backup files
+*.bak
+*.old
+
+# Only allow templates and documentation
+!*.template
+!README.md
+!.gitignore
+!*.sh
