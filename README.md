@@ -5,10 +5,10 @@ This repository manages a lightweight **K3s Kubernetes cluster** running on AWS 
 ## Overview
 
 **What this does:**
-- Provisions a 2-node K3s cluster (1 server + 1 agent) on ARM-based EC2 instances (`t4g.small` by default)
-- **nginx ingress node** with your static IP for load balancing and ingress management
+- Provisions a 2-node K3s cluster (1 server + 1 agent) on ARM-based EC2 instances (`t4g.medium` by default)
+- **nginx ingress node** with a pre-existing Elastic IP for load balancing and ingress management
 - Uses existing VPC and public subnets (no new network infrastructure created)
-- Stores K3s cluster join token and kubeconfig securely in AWS SSM Parameter Store
+- Stores K3s cluster join token, kubeconfig, and ArgoCD admin password securely in AWS SSM Parameter Store
 - Provides lifecycle management scripts to start/stop instances to save costs
 
 **Architecture:**
@@ -21,16 +21,18 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 - **K3s Agent:** Worker node running in a second public subnet (or same subnet if only one available)
 - **Security:** Intra-cluster communication allowed, optional SSH access from your IP
 - **Secrets:** Cluster token and kubeconfig stored as SSM SecureString parameters
-- **IAM:** EC2 instances have roles to read token from SSM and write kubeconfig back
+- **IAM:** EC2 instances have roles to read token from SSM, write kubeconfig, and write ArgoCD password
 
 ## Prerequisites
 
 - **Terraform** >= 1.7.0
 - **AWS CLI** configured with appropriate credentials
+- **IAM user** with permissions to manage EC2, SSM, IAM, and S3 resources (used by Terraform via the `terraform-iac` profile)
 - **Existing AWS Resources:**
   - VPC with internet connectivity
   - At least one public subnet (two recommended for HA)
-  - Optional: EC2 key pair for SSH access
+  - Elastic IP allocation for nginx ingress (managed outside Terraform)
+  - EC2 key pair for SSH access
   - S3 bucket for Terraform state backend
 
 ## Repository Structure
@@ -50,16 +52,21 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 ├── aws-config.example         # Template for aws-config
 ├── aws-credentials            # AWS credentials file (gitignored)
 ├── aws-credentials.example    # Template for aws-credentials
+├── docs/                      # Additional documentation
+│   ├── adrs/                 # Architecture Decision Records
+│   └── sops/                 # SOPS configuration
 ├── modules/
 │   ├── k3s-cluster/          # K3s cluster module
 │   │   ├── main.tf           # Security groups, IAM roles, EC2 instances
 │   │   ├── variables.tf      # Module inputs
 │   │   ├── outputs.tf        # Module outputs
+│   │   ├── user_data/        # Cloud-init scripts (server.sh, agent.sh)
 │   │   └── README.md         # Module documentation
 │   └── nginx-ingress/        # nginx load balancer/ingress module
 │       ├── main.tf           # Security groups, EC2 instance, EIP association
 │       ├── variables.tf      # Module inputs
 │       ├── outputs.tf        # Module outputs
+│       ├── user_data/        # Cloud-init script (nginx.sh)
 │       └── README.md         # Module documentation
 └── scripts/
     ├── get-kubeconfig.sh     # Fetch kubeconfig from SSM
@@ -122,9 +129,12 @@ Edit `terraform.tfvars` and set:
 - `public_subnet_ids`: List of 2+ public subnet IDs (must have internet access)
 - `key_name`: Your EC2 key pair name (optional, for SSH access)
 - `ssh_allowed_cidrs`: Your IP address CIDR blocks for SSH access (e.g., `["1.2.3.4/32"]`)
+- `nginx_eip_allocation_id`: Pre-existing Elastic IP allocation ID for the nginx ingress node
+- `k3s_server_eip_allocation_id`: (Optional) Pre-existing Elastic IP for K3s server
 - `ssm_token_name`: SSM parameter path for cluster token (e.g., `/k3s/cluster/token`)
 - `ssm_kubeconfig_name`: SSM parameter path for kubeconfig (e.g., `/k3s/cluster/kubeconfig`)
-- Optional: Override instance types if needed (defaults: K3s `t4g.small`, nginx `t4g.micro`)
+- `ssm_argocd_password_name`: SSM parameter path for ArgoCD password (e.g., `/k3s/argocd/password`)
+- Optional: Override instance types if needed (defaults: K3s `t4g.medium`, nginx `t4g.micro`)
 
 ### 4. Deploy Infrastructure
 
@@ -139,13 +149,13 @@ terraform apply
 ```
 
 The deployment will:
-1. Create Elastic IP for nginx ingress (static public IP)
+1. Reference your existing Elastic IP for nginx ingress (static public IP)
 2. Create security groups for K3s cluster and nginx ingress
 3. Generate random cluster join token and store in SSM
 4. Create IAM roles for EC2 instances to access SSM
-5. Launch K3s server instance (installs K3s and uploads kubeconfig to SSM)
+5. Launch K3s server instance (installs K3s, ArgoCD, and uploads kubeconfig to SSM)
 6. Launch K3s agent instance (joins the cluster using token from SSM)
-7. **Launch nginx ingress instance** (installs nginx and associates the Elastic IP)
+7. **Launch nginx ingress instance** (installs nginx and associates the pre-existing Elastic IP)
 
 **Note:** First boot takes ~2-3 minutes for K3s installation and cluster formation.
 
@@ -196,7 +206,7 @@ The `scripts/` directory contains convenient helper scripts:
 | `ssh-k3s-agent.sh` | SSH into the K3s agent node |
 | `ssh-nginx.sh` | SSH into the nginx ingress node |
 
-**Note:** Start/stop scripts only manage K3s nodes. The nginx instance can be stopped manually if needed via AWS Console or CLI.
+**Note:** Start/stop scripts manage all three instances (K3s server, K3s agent, and nginx).
 
 ### Accessing the Cluster
 
@@ -231,7 +241,7 @@ kubectl get nodes
 ./scripts/start-cluster.sh
 ```
 
-**Note:** The existing scripts manage K3s nodes only. If you're using nginx ingress and want to include it in stop/start operations, you can manually stop/start the nginx instance via AWS Console or CLI, or extend the scripts to include the nginx instance ID.
+**Note:** The scripts manage K3s nodes and the nginx ingress node. All three instances are stopped/started together.
 
 The kubeconfig remains valid across restarts if using an Elastic IP. Otherwise, you'll need to regenerate it after restart if the server gets a new public IP.
 
@@ -239,12 +249,22 @@ The kubeconfig remains valid across restarts if using an Elastic IP. Otherwise, 
 
 If you configured `key_name` and `ssh_allowed_cidrs`:
 
+Convenience scripts are provided for quick SSH access (see [Helper Scripts](#helper-scripts)):
+- `./scripts/ssh-k3s-server.sh` — SSH into the K3s server node
+- `./scripts/ssh-k3s-agent.sh` — SSH into the K3s agent node
+- `./scripts/ssh-nginx.sh` — SSH into the nginx ingress node
+
+Or use manual commands:
+
 ```bash
 # SSH to server
 ssh ec2-user@$(terraform output -raw k3s_server_public_ip)
 
 # SSH to agent
 ssh ec2-user@$(terraform output -raw k3s_agent_public_ip)
+
+# SSH to nginx
+ssh ec2-user@$(terraform output -raw nginx_public_ip)
 ```
 
 Check K3s logs:
@@ -290,7 +310,11 @@ sudo tail -f /var/log/nginx/error.log
 - **Custom routing:** Advanced proxy rules, rate limiting, caching, etc.
 - **Separation:** Keep ingress concerns separate from the cluster
 
-**Default configuration:** The nginx instance is pre-configured to proxy HTTP traffic from port 80 to the K3s server's private IP. You can customize the config for HTTPS, additional backends, or advanced features.
+**Default configuration:** The nginx instance is pre-configured with two upstreams:
+- **K3s backend:** Proxies HTTP traffic on port 80 to the K3s server's private IP
+- **ArgoCD proxy:** Routes `admin.rotorlabs.io/argocd` to the ArgoCD server via K3s NodePort 30080
+
+You can customize the config for HTTPS, additional backends, or advanced features.
 
 ### ArgoCD GitOps
 
@@ -361,24 +385,23 @@ argocd account update-password --current-password $(terraform output -raw argocd
 
 ## Key Features & Design Decisions
 
-### Why SSM Parameter Store?
-- **Security:** Cluster token and kubeconfig are encrypted at rest
-- **No bootstrapping complexity:** Instances can self-configure by reading SSM on boot
-- **Terraform integration:** Kubeconfig is available as a Terraform output immediately after apply
+Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
 
-### Instance Type Compatibility
-The code automatically filters subnets based on availability zone support for the selected instance type. ARM instances (`t4g.*`) may not be available in all AZs, so the deployment intelligently selects compatible subnets.
+| ADR | Decision |
+|-----|----------|
+| [001](docs/adrs/001-ssm-parameter-store.md) | SSM Parameter Store for secrets management |
+| [002](docs/adrs/002-arm-ec2-instances.md) | ARM (Graviton) EC2 instances for cost/performance |
+| [003](docs/adrs/003-nginx-self-managed-ingress.md) | Self-managed nginx as ingress over managed load balancers |
+| [004](docs/adrs/004-network-security-model.md) | Two-security-group network model |
 
-### User Data Scripts
-- **Server:** Installs K3s in server mode, fetches token from SSM, generates kubeconfig, replaces `127.0.0.1` with public IP, and uploads to SSM
+### Implementation Details
+
+**Instance Type Compatibility:** The code automatically filters subnets based on availability zone support for the selected instance type. ARM instances (`t4g.*`) may not be available in all AZs, so the deployment intelligently selects compatible subnets. Default is `t4g.medium` for K3s nodes.
+
+**User Data Scripts:**
+- **Server:** Installs K3s in server mode, fetches token from SSM, generates kubeconfig, replaces `127.0.0.1` with public IP, uploads to SSM. Also installs ArgoCD and stores the admin password in SSM.
 - **Agent:** Installs K3s in agent mode, fetches token from SSM, connects to server's private IP
-- **nginx:** Installs nginx, configures reverse proxy to K3s server private IP, ready for HTTP/HTTPS traffic
-
-### Network Security
-- K3s instances within the cluster can communicate freely (security group self-reference)
-- nginx ingress allows HTTP (80) and HTTPS (443) from internet, proxies to K3s
-- SSH access is optional and restricted to your specified CIDR blocks
-- All outbound traffic allowed (for package updates and container image pulls)
+- **nginx:** Installs nginx, configures reverse proxy to K3s server and ArgoCD, ready for HTTP/HTTPS traffic
 
 ## Outputs
 
@@ -389,11 +412,20 @@ After successful `terraform apply`, you can access:
 | `nginx_eip` | nginx Elastic IP address (static) | `terraform output nginx_eip` |
 | `nginx_public_ip` | nginx ingress public IP (same as EIP) | `terraform output nginx_public_ip` |
 | `nginx_instance_id` | nginx EC2 instance ID | `terraform output nginx_instance_id` |
+| `nginx_security_group_id` | nginx security group ID | `terraform output nginx_security_group_id` |
 | `k3s_server_public_ip` | Server public IP | `terraform output k3s_server_public_ip` |
 | `k3s_agent_public_ip` | Agent public IP | `terraform output k3s_agent_public_ip` |
-| `kubeconfig` | Full kubeconfig content | `terraform output -raw kubeconfig > kubeconfig.yaml` |
 | `k3s_server_instance_id` | Server EC2 instance ID | `terraform output k3s_server_instance_id` |
 | `k3s_agent_instance_id` | Agent EC2 instance ID | `terraform output k3s_agent_instance_id` |
+| `k3s_security_group_id` | K3s cluster security group ID | `terraform output k3s_security_group_id` |
+| `kubeconfig` | Full kubeconfig content | `terraform output -raw kubeconfig > kubeconfig.yaml` |
+| `kubeconfig_ssm_parameter_name` | SSM parameter name for kubeconfig | `terraform output kubeconfig_ssm_parameter_name` |
+| `argocd_admin_password` | ArgoCD initial admin password | `terraform output -raw argocd_admin_password` |
+| `argocd_server_url` | ArgoCD UI URL | `terraform output argocd_server_url` |
+| `argocd_ssm_parameter_name` | SSM parameter name for ArgoCD password | `terraform output argocd_ssm_parameter_name` |
+| `vpc_id` | Adopted VPC ID | `terraform output vpc_id` |
+| `public_subnet_ids` | Adopted public subnet IDs | `terraform output public_subnet_ids` |
+| `aws_region` | AWS region in use | `terraform output aws_region` |
 
 ## Troubleshooting
 
@@ -430,16 +462,16 @@ terraform destroy
 
 This will:
 - Terminate all EC2 instances (K3s server, agent, and nginx)
-- Release the nginx Elastic IP
+- Disassociate the pre-existing nginx Elastic IP (EIP itself remains)
 - Delete security groups
 - Delete IAM roles and instance profile
-- Delete SSM parameters (token and kubeconfig)
+- Delete SSM parameters (token, kubeconfig, and ArgoCD password)
 
 **Note:** Your VPC and subnets are **not** managed by this code and will remain.
 
 ## Philosophy & Design Principles
 
-- **Cost-conscious:** Target < $50/month (t4g.small for K3s, t4g.micro for nginx, stop when idle)
+- **Cost-conscious:** Target < $50/month (t4g.medium for K3s, t4g.micro for nginx, stop when idle)
 - **Single environment:** No multi-stage complexity, perfect for personal learning
 - **Adopt, don't recreate:** Uses existing VPC/subnets via data sources, no new networking
 - **Interruption acceptable:** Not production; downtime during experiments is fine

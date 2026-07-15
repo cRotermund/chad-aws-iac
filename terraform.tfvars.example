@@ -23,11 +23,23 @@ key_name = "your-ssh-keypair-name-here"
 ssh_allowed_cidrs = ["your.ip.address.here/32"]
 
 # k3s cluster join token SSM parameter name
-ssm_token_name = "your-k3s-token-ssm-parameter-name"
+ssm_token_name = "/k3s/cluster/token"
+
+# k3s cluster kubeconfig SSM parameter name
+ssm_kubeconfig_name = "/k3s/cluster/kubeconfig"
+
+# ArgoCD admin password SSM parameter name
+ssm_argocd_password_name = "/k3s/argocd/password"
+
+# Pre-existing Elastic IP allocation ID for nginx ingress (required)
+nginx_eip_allocation_id = "eipalloc-xyzreplacewithrealid"
+
+# Optional: Pre-existing Elastic IP for K3s server (leave empty if not used)
+# k3s_server_eip_allocation_id = "eipalloc-xyzreplacewithrealid"
 
 # Optional overrides (leave defaults if fine)
-# k3s_server_instance_type = "t4g.small"
-# k3s_agent_instance_type  = "t4g.small"
+# k3s_server_instance_type = "t4g.medium"
+# k3s_agent_instance_type  = "t4g.medium"
 # nginx_instance_type      = "t4g.micro"
 
 # Optional tag overrides (merged with defaults). Uncomment to customize.
