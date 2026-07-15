@@ -48,7 +48,7 @@ resource "aws_security_group_rule" "egress_all" {
 
 # Allow nginx ingress to reach K3s NodePorts (if nginx security group provided)
 resource "aws_security_group_rule" "nginx_to_nodeports" {
-	count                    = var.nginx_security_group_id != "" ? 1 : 0
+	count                    = var.create_nginx_nodeport_rule ? 1 : 0
 	type                     = "ingress"
 	security_group_id        = aws_security_group.k3s.id
 	from_port                = 30000
@@ -85,6 +85,10 @@ resource "aws_ssm_parameter" "kubeconfig_placeholder" {
   overwrite   = true
   description = "k3s kubeconfig (initial placeholder, replaced by server user_data)"
   tags        = var.tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 # Placeholder ArgoCD admin password parameter (will be overwritten by user_data after ArgoCD installs)
@@ -95,6 +99,10 @@ resource "aws_ssm_parameter" "argocd_password_placeholder" {
   overwrite   = true
   description = "ArgoCD initial admin password (replaced by server user_data)"
   tags        = var.tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 ############################################

@@ -26,12 +26,9 @@ locals {
   effective_subnet_ids = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
 }
 
-# Elastic IP for nginx ingress
-resource "aws_eip" "nginx" {
-  domain = "vpc"
-  tags = merge(var.tags, {
-    Name = "nginx-ingress-eip"
-  })
+# Reference existing EIP for nginx (managed outside Terraform, never destroyed)
+data "aws_eip" "nginx" {
+  id = var.nginx_eip_allocation_id
 }
 
 # The k3s cluster module
@@ -45,7 +42,8 @@ module "k3s" {
   ssm_token_name           = var.ssm_token_name
   ssm_kubeconfig_name      = var.ssm_kubeconfig_name
   ssm_argocd_password_name = var.ssm_argocd_password_name
-  nginx_security_group_id  = module.nginx_ingress.security_group_id
+nginx_security_group_id    = module.nginx_ingress.security_group_id
+  create_nginx_nodeport_rule = true
   tags                     = var.tags
   key_name                 = var.key_name
   ssh_allowed_cidrs        = var.ssh_allowed_cidrs
@@ -58,7 +56,7 @@ module "nginx_ingress" {
   vpc_id                = data.aws_vpc.existing.id
   subnet_id             = local.effective_subnet_ids[0]
   instance_type         = var.nginx_instance_type
-  eip_allocation_id     = aws_eip.nginx.allocation_id
+  eip_allocation_id     = data.aws_eip.nginx.id
   k3s_server_private_ip = module.k3s.server_private_ip
   key_name              = var.key_name
   ssh_allowed_cidrs     = var.ssh_allowed_cidrs

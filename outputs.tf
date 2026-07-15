@@ -81,12 +81,12 @@ output "argocd_ssm_parameter_name" {
 # nginx ingress outputs
 output "nginx_eip" {
   description = "Elastic IP address for nginx ingress (static)"
-  value       = aws_eip.nginx.public_ip
+  value       = data.aws_eip.nginx.public_ip
 }
 
 output "nginx_eip_allocation_id" {
   description = "Allocation ID of the nginx Elastic IP"
-  value       = aws_eip.nginx.allocation_id
+  value       = data.aws_eip.nginx.id
 }
 
 output "nginx_instance_id" {

@@ -79,3 +79,8 @@ variable "nginx_instance_type" {
   type        = string
   default     = "t4g.micro"
 }
+
+variable "nginx_eip_allocation_id" {
+  description = "Existing Elastic IP allocation ID for nginx (managed outside Terraform, never destroyed)"
+  type        = string
+}

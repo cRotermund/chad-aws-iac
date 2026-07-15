@@ -57,6 +57,12 @@ variable "nginx_security_group_id" {
   default     = ""
 }
 
+variable "create_nginx_nodeport_rule" {
+  description = "Whether to create a security group rule allowing nginx ingress to NodePorts"
+  type        = bool
+  default     = false
+}
+
 variable "ssm_argocd_password_name" {
   description = "SSM parameter name to store ArgoCD initial admin password (e.g. /k3s/argocd/password)"
   type        = string

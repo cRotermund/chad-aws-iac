@@ -38,8 +38,11 @@ done
 PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 cp /etc/rancher/k3s/k3s.yaml /tmp/kubeconfig
 sed -i "s/127.0.0.1/$PUBLIC_IP/" /tmp/kubeconfig
-aws ssm put-parameter --name ${ssm_kubeconfig_name} --type SecureString --overwrite --value "$(cat /tmp/kubeconfig)" || true
-echo "Kubeconfig uploaded to SSM" >> /var/log/k3s-install.log
+if aws ssm put-parameter --name ${ssm_kubeconfig_name} --type SecureString --overwrite --value "$(cat /tmp/kubeconfig)"; then
+	echo "Kubeconfig uploaded to SSM" >> /var/log/k3s-install.log
+else
+	echo "ERROR: Failed to upload kubeconfig to SSM (${ssm_kubeconfig_name})" >> /var/log/k3s-install.log
+fi
 
 # Install ArgoCD
 echo "Installing ArgoCD..." >> /var/log/k3s-install.log
@@ -48,12 +51,16 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 # Create argocd namespace
 kubectl create namespace argocd || true
 
-# Install ArgoCD
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# Install ArgoCD (use server-side apply to avoid CRD annotation size limit)
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side
 
 # Wait for ArgoCD to be ready
 echo "Waiting for ArgoCD to be ready..." >> /var/log/k3s-install.log
-kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd || true
+if kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd; then
+	echo "ArgoCD server is ready" >> /var/log/k3s-install.log
+else
+	echo "WARNING: ArgoCD server did not become available within timeout" >> /var/log/k3s-install.log
+fi
 
 # Configure ArgoCD to use /argocd base path and expose via NodePort
 kubectl patch configmap argocd-cmd-params-cm -n argocd --type merge -p '{"data":{"server.basehref":"/argocd","server.rootpath":"/argocd","server.insecure":"true"}}'
@@ -63,7 +70,11 @@ kubectl patch service argocd-server -n argocd --type merge -p '{"spec":{"type":"
 
 # Restart argocd-server to pick up config changes
 kubectl rollout restart deployment argocd-server -n argocd
-kubectl rollout status deployment argocd-server -n argocd --timeout=300s || true
+if kubectl rollout status deployment argocd-server -n argocd --timeout=300s; then
+	echo "ArgoCD server restarted successfully" >> /var/log/k3s-install.log
+else
+	echo "WARNING: ArgoCD server rollout did not complete within timeout" >> /var/log/k3s-install.log
+fi
 
 # Wait for ArgoCD initial admin secret to be created
 echo "Waiting for ArgoCD admin secret..." >> /var/log/k3s-install.log
@@ -81,8 +92,11 @@ ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o js
 
 # Store ArgoCD password in SSM (only if we got a password)
 if [ -n "$ARGOCD_PASSWORD" ]; then
-	aws ssm put-parameter --name ${ssm_argocd_password_name} --type SecureString --overwrite --value "$ARGOCD_PASSWORD"
-	echo "ArgoCD installed and password uploaded to SSM" >> /var/log/k3s-install.log
+	if aws ssm put-parameter --name ${ssm_argocd_password_name} --type SecureString --overwrite --value "$ARGOCD_PASSWORD"; then
+		echo "ArgoCD password uploaded to SSM" >> /var/log/k3s-install.log
+	else
+		echo "ERROR: Failed to upload ArgoCD password to SSM (${ssm_argocd_password_name})" >> /var/log/k3s-install.log
+	fi
 else
 	echo "ERROR: Failed to retrieve ArgoCD password" >> /var/log/k3s-install.log
 fi
