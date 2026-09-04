@@ -35,6 +35,18 @@ resource "aws_security_group_rule" "ssh_in" {
 	description       = "SSH access"
 }
 
+#Optional :6443 Ingress (for kubectl) from provided CIDR blocks
+resource "aws_security_group_rule" "kubectl_in" {
+	for_each          = toset(var.kubectl_allowed_cidrs)
+	type              = "ingress"
+	security_group_id = aws_security_group.k3s.id
+	from_port         = 6443
+	to_port           = 6443
+	protocol          = "tcp"
+	cidr_blocks       = [each.value]
+	description       = "kubectl access"
+}
+
 # Egress: allow all outbound (instances reach internet for updates)
 resource "aws_security_group_rule" "egress_all" {
 	type              = "egress"
@@ -170,12 +182,19 @@ data "aws_ami" "amazon_linux_arm" {
 	}
 }
 
+data "aws_eip" "server" {
+  count = var.server_eip_allocation_id != "" ? 1 : 0
+  id    = var.server_eip_allocation_id
+}
+
 locals {
 	server_subnet_id = length(var.subnet_ids) > 0 ? var.subnet_ids[0] : null
+	server_public_ip = var.server_eip_allocation_id != "" ? data.aws_eip.server[0].public_ip : ""
 	user_data_server = templatefile("${path.module}/user_data/server.sh", {
 		ssm_token_name            = var.ssm_token_name
 		ssm_kubeconfig_name       = var.ssm_kubeconfig_name
 		ssm_argocd_password_name  = var.ssm_argocd_password_name
+		server_public_ip           = local.server_public_ip
 	})
 }
 

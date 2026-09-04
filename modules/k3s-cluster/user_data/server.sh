@@ -18,8 +18,25 @@ done
 # Fetch K3s token from SSM Parameter Store
 TOKEN=$(aws ssm get-parameter --name ${ssm_token_name} --with-decryption --query Parameter.Value --output text)
 
+# Use the configured Elastic IP when available. Otherwise, obtain the
+# instance's current public IP through IMDSv2 before creating the certificate.
+PUBLIC_IP="${server_public_ip}"
+if [ -z "$PUBLIC_IP" ]; then
+	IMDS_TOKEN=$(curl --fail --silent --show-error \
+		-X PUT \
+		-H "X-aws-ec2-metadata-token-ttl-seconds: 21600" \
+		http://169.254.169.254/latest/api/token)
+	PUBLIC_IP=$(curl --fail --silent --show-error \
+		-H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+		http://169.254.169.254/latest/meta-data/public-ipv4)
+fi
+if [ -z "$PUBLIC_IP" ]; then
+	echo "ERROR: Could not determine the server public IP" >> /var/log/k3s-install.log
+	exit 1
+fi
+
 # Install K3s in server mode
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP" sh -
 echo "k3s server installed (SSM token)" >> /var/log/k3s-install.log
 
 # Wait for k3s to be ready (kubeconfig file exists and is valid)
@@ -35,7 +52,6 @@ done
 
 # Export kubeconfig to SSM so Terraform can read it later.
 # Replace 127.0.0.1 with this node's public IP for external access.
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 cp /etc/rancher/k3s/k3s.yaml /tmp/kubeconfig
 sed -i "s/127.0.0.1/$PUBLIC_IP/" /tmp/kubeconfig
 if aws ssm put-parameter --name ${ssm_kubeconfig_name} --type SecureString --overwrite --value "$(cat /tmp/kubeconfig)"; then

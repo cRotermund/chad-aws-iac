@@ -41,7 +41,7 @@ output "aws_region" {
 data "aws_ssm_parameter" "kubeconfig" {
   name            = var.ssm_kubeconfig_name
   with_decryption = true
-  depends_on      = [module.k3s]  # ensure cluster creation/user_data runs first
+  depends_on      = [module.k3s] # ensure cluster creation/user_data runs first
 }
 
 output "kubeconfig" {
