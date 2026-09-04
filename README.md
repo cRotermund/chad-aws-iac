@@ -214,7 +214,11 @@ Fetch the kubeconfig from SSM:
 
 ```bash
 ./scripts/get-kubeconfig.sh
+export KUBECONFIG=$(pwd)/kubeconfig.yaml
 ```
+
+The script runs in a child shell, so it cannot set `KUBECONFIG` in your current
+shell automatically. Run the export shown above before invoking `kubectl`.
 
 Or manually:
 ```bash

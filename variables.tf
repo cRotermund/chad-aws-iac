@@ -30,10 +30,10 @@ variable "tags" {
   description = "Base tags applied to all managed resources"
   type        = map(string)
   default = {
-    Owner      = "chad"
-    Project    = "infra"
-    Environment= "single"
-    ManagedBy  = "terraform"
+    Owner       = "chad"
+    Project     = "infra"
+    Environment = "single"
+    ManagedBy   = "terraform"
   }
 }
 
@@ -57,6 +57,12 @@ variable "key_name" {
 
 variable "ssh_allowed_cidrs" {
   description = "CIDR blocks allowed SSH ingress to k3s nodes (e.g. your.ip.addr/32). Keep empty to block SSH."
+  type        = list(string)
+  default     = []
+}
+
+variable "kubectl_allowed_cidrs" {
+  description = "List of CIDR blocks allowed for kubectl (6443) access. (e.g. your.ip.addr/32).  Leave empty to disable kubectl access."
   type        = list(string)
   default     = []
 }

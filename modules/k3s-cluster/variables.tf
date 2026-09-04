@@ -35,6 +35,12 @@ variable "ssh_allowed_cidrs" {
   default     = []
 }
 
+variable "kubectl_allowed_cidrs" {
+  description = "List of CIDR blocks allowed for kubectl (6443) access. (e.g. your workstation IP /32).  Leave empty to disable kubectl access."
+  type        = list(string)
+  default     = []
+}
+
 variable "key_name" {
   description = "Optional existing EC2 key pair name for SSH access to server node"
   type        = string

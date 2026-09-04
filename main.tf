@@ -20,9 +20,9 @@ data "aws_ec2_instance_type_offerings" "k3s_server_type" {
 }
 
 locals {
-  supported_azs       = data.aws_ec2_instance_type_offerings.k3s_server_type.locations
+  supported_azs = data.aws_ec2_instance_type_offerings.k3s_server_type.locations
   # Keep only subnets whose AZ supports the instance type
-  filtered_subnet_ids = [for s in data.aws_subnet.public : s.id if contains(local.supported_azs, s.availability_zone)]
+  filtered_subnet_ids  = [for s in data.aws_subnet.public : s.id if contains(local.supported_azs, s.availability_zone)]
   effective_subnet_ids = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
 }
 
@@ -33,20 +33,21 @@ data "aws_eip" "nginx" {
 
 # The k3s cluster module
 module "k3s" {
-  source                   = "./modules/k3s-cluster"
-  vpc_id                   = data.aws_vpc.existing.id
-  subnet_ids               = local.effective_subnet_ids
-  server_instance_type     = var.k3s_server_instance_type
-  agent_instance_type      = var.k3s_agent_instance_type
-  server_eip_allocation_id = var.k3s_server_eip_allocation_id
-  ssm_token_name           = var.ssm_token_name
-  ssm_kubeconfig_name      = var.ssm_kubeconfig_name
-  ssm_argocd_password_name = var.ssm_argocd_password_name
-nginx_security_group_id    = module.nginx_ingress.security_group_id
+  source                     = "./modules/k3s-cluster"
+  vpc_id                     = data.aws_vpc.existing.id
+  subnet_ids                 = local.effective_subnet_ids
+  server_instance_type       = var.k3s_server_instance_type
+  agent_instance_type        = var.k3s_agent_instance_type
+  server_eip_allocation_id   = var.k3s_server_eip_allocation_id
+  ssm_token_name             = var.ssm_token_name
+  ssm_kubeconfig_name        = var.ssm_kubeconfig_name
+  ssm_argocd_password_name   = var.ssm_argocd_password_name
+  nginx_security_group_id    = module.nginx_ingress.security_group_id
   create_nginx_nodeport_rule = true
-  tags                     = var.tags
-  key_name                 = var.key_name
-  ssh_allowed_cidrs        = var.ssh_allowed_cidrs
+  tags                       = var.tags
+  key_name                   = var.key_name
+  ssh_allowed_cidrs          = var.ssh_allowed_cidrs
+  kubectl_allowed_cidrs      = var.kubectl_allowed_cidrs
 }
 
 # The nginx ingress module
