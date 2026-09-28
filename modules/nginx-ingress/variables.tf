@@ -41,3 +41,24 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "tls_certificate_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM server certificate"
+  type        = string
+}
+
+variable "tls_ca_bundle_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM CA bundle"
+  type        = string
+}
+
+variable "tls_private_key_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM private key"
+  type        = string
+}
+
+variable "tls_kms_key_arn" {
+  description = "KMS key ARN used to encrypt the TLS SSM parameters"
+  type        = string
+  default     = "*"
+}
