@@ -279,7 +279,9 @@ sudo journalctl -u k3s-agent -f  # On agent
 
 ### nginx Ingress
 
-Your nginx ingress node provides a dedicated load balancer with your static IP:
+The nginx ingress node provides a dedicated load balancer with the static IP. TLS is terminated on nginx for `apis.rotorlabs.io`, `admin.rotorlabs.io`, and `apps.rotorlabs.io`.
+
+TLS certificate generation, validation, SSM deployment, renewal, rollback, and troubleshooting are documented in the [rotorlabs SSL certificate SOP](docs/sops/ssl/rotorlabs/README.md). Use `scripts/rotate-nginx-tls.sh` for certificate deployment and rotation rather than replacing the Nginx instance.
 
 **Access your cluster:**
 ```bash
@@ -310,7 +312,7 @@ sudo tail -f /var/log/nginx/error.log
 **Why use nginx ingress?**
 - **Stable endpoint:** Your static IP doesn't change even if K3s nodes are recreated
 - **Load balancing:** Distribute traffic across multiple K3s nodes (edit upstream config)
-- **SSL termination:** Add Let's Encrypt or custom certificates at the nginx layer
+- **SSL termination:** Terminate TLS at the nginx layer using the rotorlabs certificate deployment SOP
 - **Custom routing:** Advanced proxy rules, rate limiting, caching, etc.
 - **Separation:** Keep ingress concerns separate from the cluster
 
@@ -318,21 +320,21 @@ sudo tail -f /var/log/nginx/error.log
 - **K3s backend:** Proxies HTTP traffic on port 80 to the K3s server's private IP
 - **ArgoCD proxy:** Routes `admin.rotorlabs.io/argocd` to the ArgoCD server via K3s NodePort 30080
 
-You can customize the config for HTTPS, additional backends, or advanced features.
+You can customize the config for additional backends or advanced features.
 
 ### ArgoCD GitOps
 
-ArgoCD is automatically installed on the K3s server during first boot for GitOps-based application deployment. It's accessible at **http://admin.rotorlabs.io/argocd** via the nginx reverse proxy.
+ArgoCD is automatically installed on the K3s server during first boot for GitOps-based application deployment. It's accessible at **https://admin.rotorlabs.io/argocd** via the nginx reverse proxy.
 
 **Access ArgoCD UI:**
 
 ```bash
-# Ensure your DNS points admin.rotorlabs.io to your nginx server's Elastic IP
+# Ensure DNS points admin.rotorlabs.io to the nginx server's Elastic IP
 # Get the admin password
 ./scripts/get-argocd-password.sh
 
 # Open in browser
-http://admin.rotorlabs.io/argocd
+https://admin.rotorlabs.io/argocd
 ```
 - Username: `admin`
 - Password: Retrieved from script above
@@ -363,7 +365,7 @@ terraform output -raw argocd_admin_password
 2. **Login via CLI:**
    ```bash
    # Via nginx (HTTP)
-   argocd login admin.rotorlabs.io:80 --username admin --password $(terraform output -raw argocd_admin_password) --insecure --grpc-web
+   argocd login admin.rotorlabs.io:443 --username admin --password $(terraform output -raw argocd_admin_password) --insecure --grpc-web
    ```
 
 3. **Create your first application:**

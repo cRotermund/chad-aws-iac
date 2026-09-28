@@ -54,12 +54,16 @@ module "k3s" {
 module "nginx_ingress" {
   source = "./modules/nginx-ingress"
 
-  vpc_id                = data.aws_vpc.existing.id
-  subnet_id             = local.effective_subnet_ids[0]
-  instance_type         = var.nginx_instance_type
-  eip_allocation_id     = data.aws_eip.nginx.id
-  k3s_server_private_ip = module.k3s.server_private_ip
-  key_name              = var.key_name
-  ssh_allowed_cidrs     = var.ssh_allowed_cidrs
-  tags                  = var.tags
+  vpc_id                         = data.aws_vpc.existing.id
+  subnet_id                      = local.effective_subnet_ids[0]
+  instance_type                  = var.nginx_instance_type
+  eip_allocation_id              = data.aws_eip.nginx.id
+  k3s_server_private_ip          = module.k3s.server_private_ip
+  key_name                       = var.key_name
+  ssh_allowed_cidrs              = var.ssh_allowed_cidrs
+  tags                           = var.tags
+  tls_certificate_parameter_name = var.nginx_tls_certificate_parameter_name
+  tls_ca_bundle_parameter_name   = var.nginx_tls_ca_bundle_parameter_name
+  tls_private_key_parameter_name = var.nginx_tls_private_key_parameter_name
+  tls_kms_key_arn                = var.nginx_tls_kms_key_arn
 }

@@ -80,8 +80,70 @@ data "aws_ami" "amazon_linux_arm" {
 
 locals {
   user_data_nginx = templatefile("${path.module}/user_data/nginx.sh", {
-    k3s_server_private_ip = var.k3s_server_private_ip
+    k3s_server_private_ip     = var.k3s_server_private_ip
+    tls_certificate_parameter = var.tls_certificate_parameter_name
+    tls_ca_bundle_parameter   = var.tls_ca_bundle_parameter_name
+    tls_private_key_parameter = var.tls_private_key_parameter_name
   })
+}
+
+data "aws_partition" "current" {}
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+locals {
+  tls_parameter_arns = [
+    "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.tls_certificate_parameter_name}",
+    "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.tls_ca_bundle_parameter_name}",
+    "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.tls_private_key_parameter_name}",
+  ]
+}
+
+resource "aws_iam_role" "nginx" {
+  name = "nginx-ingress-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy" "nginx_tls_access" {
+  name = "nginx-tls-ssm-read"
+  role = aws_iam_role.nginx.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter"]
+        Resource = local.tls_parameter_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = var.tls_kms_key_arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "nginx_ssm_core" {
+  role       = aws_iam_role.nginx.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "nginx" {
+  name = "nginx-ingress-profile"
+  role = aws_iam_role.nginx.name
+  tags = var.tags
 }
 
 resource "aws_instance" "nginx" {
@@ -92,6 +154,7 @@ resource "aws_instance" "nginx" {
   key_name               = var.key_name != "" ? var.key_name : null
   user_data              = local.user_data_nginx
   user_data_replace_on_change = true
+  iam_instance_profile   = aws_iam_instance_profile.nginx.name
 
   tags = merge(var.tags, {
     Name      = "nginx-ingress"

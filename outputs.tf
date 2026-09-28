@@ -70,7 +70,7 @@ output "argocd_admin_password" {
 
 output "argocd_server_url" {
   description = "ArgoCD server URL (accessible via nginx reverse proxy)"
-  value       = "http://admin.rotorlabs.io/argocd"
+  value       = "https://admin.rotorlabs.io/argocd"
 }
 
 output "argocd_ssm_parameter_name" {

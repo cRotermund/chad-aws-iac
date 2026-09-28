@@ -10,4 +10,4 @@ terraform output -raw argocd_admin_password
 echo ""
 echo ""
 echo "Username: admin"
-echo "ArgoCD UI: http://admin.rotorlabs.io/argocd"
+echo "ArgoCD UI: https://admin.rotorlabs.io/argocd"

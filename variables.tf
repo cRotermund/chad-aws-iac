@@ -90,3 +90,27 @@ variable "nginx_eip_allocation_id" {
   description = "Existing Elastic IP allocation ID for nginx (managed outside Terraform, never destroyed)"
   type        = string
 }
+
+variable "nginx_tls_certificate_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM server certificate for the rotorlabs domains"
+  type        = string
+  default     = "/nginx/tls/rotorlabs/certificate"
+}
+
+variable "nginx_tls_ca_bundle_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM CA bundle for the rotorlabs domains"
+  type        = string
+  default     = "/nginx/tls/rotorlabs/ca-bundle"
+}
+
+variable "nginx_tls_private_key_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM private key for the rotorlabs domains"
+  type        = string
+  default     = "/nginx/tls/rotorlabs/private-key"
+}
+
+variable "nginx_tls_kms_key_arn" {
+  description = "KMS key ARN used to encrypt the nginx TLS SSM parameters; use * for the AWS-managed aws/ssm key"
+  type        = string
+  default     = "*"
+}
