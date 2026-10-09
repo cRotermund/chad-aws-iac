@@ -202,6 +202,7 @@ The `scripts/` directory contains convenient helper scripts:
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
 | `get-argocd-password.sh` | Retrieve ArgoCD admin password |
 | `healthcheck-infra.sh` | Run read-only checks for AWS, k3s, ArgoCD, nginx, and public OIDC endpoints |
+| `test-oidc.sh` | Test K3s-to-AWS OIDC federation and clean up temporary service accounts |
 | `start-cluster.sh` | Start all instances (K3s + nginx) |
 | `stop-cluster.sh` | Stop all instances to save costs |
 | `ssh-k3s-server.sh` | SSH into the K3s server node |
@@ -220,6 +221,19 @@ The script checks AWS instance state and status, Kubernetes API request serving
 and readiness, node readiness, ArgoCD availability, public HTTPS routes, and
 the OIDC discovery and JWKS endpoints. It exits with status `1` when any check
 fails.
+
+Run the OIDC federation test after applying the IAM provider and test role:
+
+```bash
+./scripts/test-oidc.sh
+```
+
+The test verifies that the trusted `default/aws-test` service account can assume
+the Terraform-managed role, while a different service account and an incorrect
+token audience are denied. It also confirms the test role has no unintended S3
+access. Any service accounts created by the script and all temporary tokens are
+removed automatically; an existing `default/aws-test` service account is left
+untouched.
 
 ### Accessing the Cluster
 

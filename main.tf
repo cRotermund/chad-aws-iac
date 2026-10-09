@@ -22,8 +22,58 @@ data "aws_ec2_instance_type_offerings" "k3s_server_type" {
 locals {
   supported_azs = data.aws_ec2_instance_type_offerings.k3s_server_type.locations
   # Keep only subnets whose AZ supports the instance type
-  filtered_subnet_ids  = [for s in data.aws_subnet.public : s.id if contains(local.supported_azs, s.availability_zone)]
-  effective_subnet_ids = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
+  filtered_subnet_ids       = [for s in data.aws_subnet.public : s.id if contains(local.supported_azs, s.availability_zone)]
+  effective_subnet_ids      = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
+  k3s_oidc_issuer_host_path = trimprefix(var.k3s_service_account_issuer, "https://")
+}
+
+data "aws_iam_policy_document" "k3s_oidc_test_assume_role" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity",
+    ]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.k3s.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.k3s_oidc_issuer_host_path}:aud"
+      values = [
+        "sts.amazonaws.com",
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.k3s_oidc_issuer_host_path}:sub"
+      values = [
+        "system:serviceaccount:${var.k3s_oidc_test_service_account_namespace}:${var.k3s_oidc_test_service_account_name}",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_openid_connect_provider" "k3s" {
+  url = var.k3s_service_account_issuer
+
+  client_id_list = [
+    "sts.amazonaws.com",
+  ]
+
+  tags = merge(var.tags, {
+    Name = "k3s-oidc-provider"
+  })
+}
+
+resource "aws_iam_role" "k3s_oidc_test" {
+  name               = var.k3s_oidc_test_role_name
+  assume_role_policy = data.aws_iam_policy_document.k3s_oidc_test_assume_role.json
+  tags               = var.tags
 }
 
 # Reference existing EIP for nginx (managed outside Terraform, never destroyed)

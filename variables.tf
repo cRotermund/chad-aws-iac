@@ -15,6 +15,24 @@ variable "k3s_service_account_issuer" {
   }
 }
 
+variable "k3s_oidc_test_role_name" {
+  description = "IAM role name used to validate K3s service-account federation"
+  type        = string
+  default     = "k3s-oidc-test"
+}
+
+variable "k3s_oidc_test_service_account_namespace" {
+  description = "Kubernetes namespace allowed to assume the K3s OIDC test role"
+  type        = string
+  default     = "default"
+}
+
+variable "k3s_oidc_test_service_account_name" {
+  description = "Kubernetes service account allowed to assume the K3s OIDC test role"
+  type        = string
+  default     = "aws-test"
+}
+
 variable "vpc_id" {
   description = "Existing VPC ID to adopt (leave empty until known)"
   type        = string
