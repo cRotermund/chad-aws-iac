@@ -22,3 +22,18 @@ This repo maintains ADRs in [`docs/adrs/`](docs/adrs/). These are the canonical 
    - **Decision:** What was chosen
    - **Alternatives Considered:** A table with pros/cons
    - **Consequences:** Both positive and negative outcomes
+
+## Terraform Formatting
+
+All Terraform files in the repository, including files under `modules/`, must
+use the canonical Terraform formatter. Always format the complete tree from the
+repository root before validating or reviewing a change:
+
+```bash
+terraform fmt -recursive
+terraform fmt -check -recursive
+```
+
+The `-check` command must pass before a change is considered ready. Run
+`terraform validate` after formatting, and do not limit formatting to only the
+files modified by the current change.

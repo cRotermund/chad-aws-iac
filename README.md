@@ -9,6 +9,7 @@ This repository manages a lightweight **K3s Kubernetes cluster** running on AWS 
 - **nginx ingress node** with a pre-existing Elastic IP for load balancing and ingress management
 - Uses existing VPC and public subnets (no new network infrastructure created)
 - Stores K3s cluster join token, kubeconfig, and ArgoCD admin password securely in AWS SSM Parameter Store
+- Configures a stable Kubernetes service-account OIDC issuer for external identity federation
 - Provides lifecycle management scripts to start/stop instances to save costs
 
 **Architecture:**
@@ -200,6 +201,7 @@ The `scripts/` directory contains convenient helper scripts:
 | `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
 | `get-argocd-password.sh` | Retrieve ArgoCD admin password |
+| `healthcheck-infra.sh` | Run read-only checks for AWS, k3s, ArgoCD, nginx, and public OIDC endpoints |
 | `start-cluster.sh` | Start all instances (K3s + nginx) |
 | `stop-cluster.sh` | Stop all instances to save costs |
 | `ssh-k3s-server.sh` | SSH into the K3s server node |
@@ -207,6 +209,17 @@ The `scripts/` directory contains convenient helper scripts:
 | `ssh-nginx.sh` | SSH into the nginx ingress node |
 
 **Note:** Start/stop scripts manage all three instances (K3s server, K3s agent, and nginx).
+
+Run the read-only infrastructure health check from the repository root:
+
+```bash
+./scripts/healthcheck-infra.sh
+```
+
+The script checks AWS instance state and status, Kubernetes API request serving
+and readiness, node readiness, ArgoCD availability, public HTTPS routes, and
+the OIDC discovery and JWKS endpoints. It exits with status `1` when any check
+fails.
 
 ### Accessing the Cluster
 

@@ -1,22 +1,22 @@
-variable "vpc_id" { 
-  type = string 
+variable "vpc_id" {
+  type = string
 }
 
 variable "subnet_ids" {
-   type = list(string) 
+  type = list(string)
 }
 
-variable "server_instance_type" { 
-  type = string 
+variable "server_instance_type" {
+  type = string
 }
 
-variable "agent_instance_type" { 
-  type = string 
+variable "agent_instance_type" {
+  type = string
 }
 
-variable "server_eip_allocation_id" { 
-    type = string 
-    default = "" 
+variable "server_eip_allocation_id" {
+  type    = string
+  default = ""
 }
 
 variable "cluster_token_length" {
@@ -25,8 +25,8 @@ variable "cluster_token_length" {
   default     = 40
 }
 
-variable "tags" { 
-  type = map(string) 
+variable "tags" {
+  type = map(string)
 }
 
 variable "ssh_allowed_cidrs" {
@@ -71,5 +71,10 @@ variable "create_nginx_nodeport_rule" {
 
 variable "ssm_argocd_password_name" {
   description = "SSM parameter name to store ArgoCD initial admin password (e.g. /k3s/argocd/password)"
+  type        = string
+}
+
+variable "service_account_issuer" {
+  description = "Stable OIDC issuer URL configured on the k3s API server"
   type        = string
 }

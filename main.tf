@@ -42,6 +42,7 @@ module "k3s" {
   ssm_token_name             = var.ssm_token_name
   ssm_kubeconfig_name        = var.ssm_kubeconfig_name
   ssm_argocd_password_name   = var.ssm_argocd_password_name
+  service_account_issuer     = var.k3s_service_account_issuer
   nginx_security_group_id    = module.nginx_ingress.security_group_id
   create_nginx_nodeport_rule = true
   tags                       = var.tags

@@ -4,6 +4,17 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "k3s_service_account_issuer" {
+  description = "Stable OIDC issuer URL configured on the k3s API server"
+  type        = string
+  default     = "https://apis.rotorlabs.io/aws-oidc"
+
+  validation {
+    condition     = var.k3s_service_account_issuer == "https://apis.rotorlabs.io/aws-oidc"
+    error_message = "The k3s service-account issuer must remain https://apis.rotorlabs.io/aws-oidc."
+  }
+}
+
 variable "vpc_id" {
   description = "Existing VPC ID to adopt (leave empty until known)"
   type        = string
