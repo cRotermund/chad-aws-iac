@@ -52,6 +52,34 @@ for i in {1..30}; do
 	sleep 10
 done
 
+# Allow unauthenticated callers to retrieve only the OIDC discovery and JWKS
+# documents. All other Kubernetes API requests remain subject to RBAC.
+kubectl apply --kubeconfig=/etc/rancher/k3s/k3s.yaml -f - <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-public-metadata
+rules:
+- nonResourceURLs:
+  - /.well-known/openid-configuration
+  - /openid/v1/jwks
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-public-metadata
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-public-metadata
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:unauthenticated
+EOF
+
 # Export kubeconfig to SSM so Terraform can read it later.
 # Replace 127.0.0.1 with this node's public IP for external access.
 cp /etc/rancher/k3s/k3s.yaml /tmp/kubeconfig
