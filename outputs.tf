@@ -43,6 +43,16 @@ output "k3s_service_account_issuer" {
   value       = var.k3s_service_account_issuer
 }
 
+output "k3s_oidc_provider_arn" {
+  description = "AWS IAM OIDC provider ARN for the K3s service-account issuer"
+  value       = aws_iam_openid_connect_provider.k3s.arn
+}
+
+output "k3s_oidc_test_role_arn" {
+  description = "IAM role ARN restricted to the configured K3s OIDC test service account"
+  value       = aws_iam_role.k3s_oidc_test.arn
+}
+
 data "aws_ssm_parameter" "kubeconfig" {
   name            = var.ssm_kubeconfig_name
   with_decryption = true
