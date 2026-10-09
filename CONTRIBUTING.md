@@ -86,7 +86,25 @@ Refs #100
 - Do not commit credentials, private keys, kubeconfigs, Terraform state, or other secrets.
 - Review `git diff` before committing and confirm that generated or local files are not included.
 - Update relevant README documentation, module documentation, or ADRs when behavior or infrastructure decisions change.
-- Run applicable validation before committing. For Terraform changes, run `terraform fmt`, `terraform validate`, and review the resulting plan when credentials and backend access are available.
+- Run applicable validation before committing. For any Terraform change, run `terraform fmt -recursive` from the repository root, then confirm it is clean with `terraform fmt -check -recursive`.
+- Run `terraform validate` after formatting, and review the resulting plan when credentials and backend access are available.
+
+## Formatting
+
+Terraform source is formatted with the canonical Terraform formatter. The entire
+repository tree must be formatted rather than only the files changed in a
+commit, because modules and root configuration are validated together.
+
+Run from the repository root:
+
+```bash
+terraform fmt -recursive
+terraform fmt -check -recursive
+```
+
+Formatting is required before validation, planning, review, and commit. Do not
+manually reformat Terraform files in a way that causes `terraform fmt -check
+-recursive` to fail.
 
 ## Pull Requests
 

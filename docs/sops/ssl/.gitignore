@@ -16,6 +16,7 @@
 *.ca-bundle
 *.fullchain.pem
 *.chain.pem
+*.p7b
 
 # Backup files
 *.bak

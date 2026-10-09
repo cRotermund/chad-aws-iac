@@ -36,7 +36,7 @@ if [ -z "$PUBLIC_IP" ]; then
 fi
 
 # Install K3s in server mode
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer}" sh -
 echo "k3s server installed (SSM token)" >> /var/log/k3s-install.log
 
 # Wait for k3s to be ready (kubeconfig file exists and is valid)

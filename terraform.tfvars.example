@@ -29,6 +29,9 @@ kubectl_allowed_cidrs = ["your.ip.address.here/32"]
 # k3s cluster join token SSM parameter name
 ssm_token_name = "/k3s/cluster/token"
 
+# Stable OIDC issuer for Kubernetes service-account tokens. Do not change the path.
+# k3s_service_account_issuer = "https://apis.rotorlabs.io/aws-oidc"
+
 # k3s cluster kubeconfig SSM parameter name
 ssm_kubeconfig_name = "/k3s/cluster/kubeconfig"
 

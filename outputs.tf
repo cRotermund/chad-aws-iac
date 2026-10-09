@@ -38,6 +38,11 @@ output "aws_region" {
   value       = var.aws_region
 }
 
+output "k3s_service_account_issuer" {
+  description = "OIDC issuer URL configured for Kubernetes service-account tokens"
+  value       = var.k3s_service_account_issuer
+}
+
 data "aws_ssm_parameter" "kubeconfig" {
   name            = var.ssm_kubeconfig_name
   with_decryption = true

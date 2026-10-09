@@ -147,14 +147,14 @@ resource "aws_iam_instance_profile" "nginx" {
 }
 
 resource "aws_instance" "nginx" {
-  ami                    = data.aws_ami.amazon_linux_arm.id
-  instance_type          = var.instance_type
-  subnet_id              = var.subnet_id
-  vpc_security_group_ids = [aws_security_group.nginx.id]
-  key_name               = var.key_name != "" ? var.key_name : null
-  user_data              = local.user_data_nginx
+  ami                         = data.aws_ami.amazon_linux_arm.id
+  instance_type               = var.instance_type
+  subnet_id                   = var.subnet_id
+  vpc_security_group_ids      = [aws_security_group.nginx.id]
+  key_name                    = var.key_name != "" ? var.key_name : null
+  user_data                   = local.user_data_nginx
   user_data_replace_on_change = true
-  iam_instance_profile   = aws_iam_instance_profile.nginx.name
+  iam_instance_profile        = aws_iam_instance_profile.nginx.name
 
   tags = merge(var.tags, {
     Name      = "nginx-ingress"
