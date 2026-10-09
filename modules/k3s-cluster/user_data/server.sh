@@ -35,8 +35,10 @@ if [ -z "$PUBLIC_IP" ]; then
 	exit 1
 fi
 
-# Install K3s in server mode
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer}" sh -
+# Install K3s in server mode. The discovery and JWKS endpoints are public
+# OIDC metadata endpoints, while other Kubernetes API access remains governed
+# by the normal authentication and authorization configuration.
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer} --kube-apiserver-arg=service-account-jwks-uri=${service_account_issuer}/openid/v1/jwks --kube-apiserver-arg=anonymous-auth=true" sh -
 echo "k3s server installed (SSM token)" >> /var/log/k3s-install.log
 
 # Wait for k3s to be ready (kubeconfig file exists and is valid)
@@ -49,6 +51,34 @@ for i in {1..30}; do
 	echo "Waiting for k3s... attempt $i/30" >> /var/log/k3s-install.log
 	sleep 10
 done
+
+# Allow unauthenticated callers to retrieve only the OIDC discovery and JWKS
+# documents. All other Kubernetes API requests remain subject to RBAC.
+kubectl apply --kubeconfig=/etc/rancher/k3s/k3s.yaml -f - <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-public-metadata
+rules:
+- nonResourceURLs:
+  - /.well-known/openid-configuration
+  - /openid/v1/jwks
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-public-metadata
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-public-metadata
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:unauthenticated
+EOF
 
 # Export kubeconfig to SSM so Terraform can read it later.
 # Replace 127.0.0.1 with this node's public IP for external access.

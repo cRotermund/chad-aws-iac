@@ -56,7 +56,7 @@ check_http_route() {
   fi
 
   case "$status" in
-    2??|3??|4??)
+    2??|3??)
       pass_check "$name ($url) returned HTTP $status"
       ;;
     *)
@@ -91,7 +91,12 @@ check_oidc_jwks() {
     return
   fi
 
-  if printf '%s' "$response" | grep -Eq '"keys"[[:space:]]*:[[:space:]]*\[[^]]+\]'; then
+  if printf '%s' "$response" | grep -Eq '"keys"[[:space:]]*:[[:space:]]*\[[^]]+\]' && \
+    printf '%s' "$response" | grep -Eq '"kty"[[:space:]]*:[[:space:]]*"RSA"' && \
+    printf '%s' "$response" | grep -Eq '"use"[[:space:]]*:[[:space:]]*"sig"' && \
+    printf '%s' "$response" | grep -Eq '"alg"[[:space:]]*:[[:space:]]*"RS256"' && \
+    printf '%s' "$response" | grep -Eq '"n"[[:space:]]*:[[:space:]]*"[A-Za-z0-9_-]+"' && \
+    printf '%s' "$response" | grep -Eq '"e"[[:space:]]*:[[:space:]]*"[A-Za-z0-9_-]+"'; then
     pass_check 'OIDC JWKS response contains public keys'
   else
     fail_check 'OIDC JWKS response contains public keys'
