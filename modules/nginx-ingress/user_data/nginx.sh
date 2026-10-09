@@ -39,6 +39,10 @@ upstream argocd_backend {
     server ${k3s_server_private_ip}:30080;
 }
 
+upstream k3s_api_backend {
+    server ${k3s_server_private_ip}:6443;
+}
+
 # Redirect every HTTP host to HTTPS while preserving the requested URI.
 server {
     listen 80 default_server;
@@ -73,11 +77,53 @@ server {
     }
 }
 
-# Applications and APIs are routed to the K3s HTTP ingress backend.
+# The public OIDC issuer is served by the Kubernetes API server. TLS terminates
+# at nginx, while this private hop uses the API server's native HTTPS endpoint.
+# Certificate verification is intentionally disabled because the API server
+# certificate is private to the cluster and access is restricted by security
+# groups.
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name apps.rotorlabs.io apis.rotorlabs.io;
+    server_name apis.rotorlabs.io;
+
+    ssl_certificate /etc/nginx/ssl/rotorlabs.fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/rotorlabs.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location = /aws-oidc/.well-known/openid-configuration {
+        proxy_pass https://k3s_api_backend/.well-known/openid-configuration;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location = /aws-oidc/openid/v1/jwks {
+        proxy_pass https://k3s_api_backend/openid/v1/jwks;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    # Preserve the existing API ingress behavior for non-OIDC paths.
+    location / {
+        proxy_pass http://k3s_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+# Applications are routed to the K3s HTTP ingress backend.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name apps.rotorlabs.io;
 
     ssl_certificate /etc/nginx/ssl/rotorlabs.fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/rotorlabs.key;

@@ -70,6 +70,18 @@ resource "aws_security_group_rule" "nginx_to_nodeports" {
   description              = "Allow nginx ingress to reach K3s NodePorts"
 }
 
+# Allow nginx to proxy the public OIDC endpoints to the Kubernetes API server.
+resource "aws_security_group_rule" "nginx_to_kubernetes_api" {
+  count                    = var.create_nginx_nodeport_rule ? 1 : 0
+  type                     = "ingress"
+  security_group_id        = aws_security_group.k3s.id
+  from_port                = 6443
+  to_port                  = 6443
+  protocol                 = "tcp"
+  source_security_group_id = var.nginx_security_group_id
+  description              = "Allow nginx to reach the Kubernetes API for OIDC endpoints"
+}
+
 ############################################################
 # k3s cluster joining token, kubeconfig and SSM parameters
 ############################################################

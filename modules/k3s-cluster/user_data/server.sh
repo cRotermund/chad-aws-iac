@@ -35,8 +35,10 @@ if [ -z "$PUBLIC_IP" ]; then
 	exit 1
 fi
 
-# Install K3s in server mode
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer}" sh -
+# Install K3s in server mode. The discovery and JWKS endpoints are public
+# OIDC metadata endpoints, while other Kubernetes API access remains governed
+# by the normal authentication and authorization configuration.
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer} --kube-apiserver-arg=service-account-jwks-uri=${service_account_issuer}/openid/v1/jwks --kube-apiserver-arg=anonymous-auth=true" sh -
 echo "k3s server installed (SSM token)" >> /var/log/k3s-install.log
 
 # Wait for k3s to be ready (kubeconfig file exists and is valid)
