@@ -422,10 +422,11 @@ Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
 
 | ADR | Decision |
 |-----|----------|
-| [001](docs/adrs/001-ssm-parameter-store.md) | SSM Parameter Store for secrets management |
+| [001](docs/adrs/001-ssm-parameter-store.md) | SSM Parameter Store for infrastructure secrets |
 | [002](docs/adrs/002-arm-ec2-instances.md) | ARM (Graviton) EC2 instances for cost/performance |
 | [003](docs/adrs/003-nginx-self-managed-ingress.md) | Self-managed nginx as ingress over managed load balancers |
 | [004](docs/adrs/004-network-security-model.md) | Two-security-group network model |
+| [005](docs/adrs/005-kubernetes-runtime-secrets.md) | External Secrets Operator for Kubernetes runtime secrets |
 
 ### Implementation Details
 
