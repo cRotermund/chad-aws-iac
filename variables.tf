@@ -33,6 +33,33 @@ variable "k3s_oidc_test_service_account_name" {
   default     = "aws-test"
 }
 
+variable "k3s_eso_auth_role_name" {
+  description = "IAM role trusted by the ESO Kubernetes service account through OIDC"
+  type        = string
+  default     = "k3s-external-secrets-auth"
+}
+
+variable "k3s_eso_ssm_role_name" {
+  description = "IAM role ESO assumes to read approved SSM parameters"
+  type        = string
+  default     = "k3s-ssm-parameter-read"
+}
+
+variable "k3s_eso_ssm_parameter_path" {
+  description = "Inclusive SSM parameter path ESO may read"
+  type        = string
+  default     = "/kubernetes/appsecrets/"
+
+  validation {
+    condition = (
+      startswith(var.k3s_eso_ssm_parameter_path, "/") &&
+      endswith(var.k3s_eso_ssm_parameter_path, "/") &&
+      !strcontains(var.k3s_eso_ssm_parameter_path, "*")
+    )
+    error_message = "The ESO SSM parameter path must start and end with / and must not contain wildcards."
+  }
+}
+
 variable "vpc_id" {
   description = "Existing VPC ID to adopt (leave empty until known)"
   type        = string

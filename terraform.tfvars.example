@@ -32,6 +32,9 @@ ssm_token_name = "/k3s/cluster/token"
 # Stable OIDC issuer for Kubernetes service-account tokens. Do not change the path.
 # k3s_service_account_issuer = "https://apis.rotorlabs.io/aws-oidc"
 
+# SSM path readable by External Secrets Operator for application runtime secrets.
+# k3s_eso_ssm_parameter_path = "/kubernetes/appsecrets/"
+
 # k3s cluster kubeconfig SSM parameter name
 ssm_kubeconfig_name = "/k3s/cluster/kubeconfig"
 

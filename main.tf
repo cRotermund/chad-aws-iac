@@ -9,6 +9,12 @@ data "aws_subnet" "public" {
   id       = each.value
 }
 
+data "aws_partition" "current" {}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
 # Determine which AZs support the selected server instance type (e.g., t4g.small may not be in all AZs).
 data "aws_ec2_instance_type_offerings" "k3s_server_type" {
   location_type = "availability-zone"
@@ -25,6 +31,9 @@ locals {
   filtered_subnet_ids       = [for s in data.aws_subnet.public : s.id if contains(local.supported_azs, s.availability_zone)]
   effective_subnet_ids      = length(local.filtered_subnet_ids) > 0 ? local.filtered_subnet_ids : [for s in data.aws_subnet.public : s.id]
   k3s_oidc_issuer_host_path = trimprefix(var.k3s_service_account_issuer, "https://")
+  k3s_eso_auth_role_arn     = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.k3s_eso_auth_role_name}"
+  k3s_eso_ssm_role_arn      = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.k3s_eso_ssm_role_name}"
+  k3s_eso_ssm_parameter_arn = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.k3s_eso_ssm_parameter_path}*"
 }
 
 data "aws_iam_policy_document" "k3s_oidc_test_assume_role" {
@@ -74,6 +83,90 @@ resource "aws_iam_role" "k3s_oidc_test" {
   name               = var.k3s_oidc_test_role_name
   assume_role_policy = data.aws_iam_policy_document.k3s_oidc_test_assume_role.json
   tags               = var.tags
+}
+
+data "aws_iam_policy_document" "k3s_eso_auth_assume_role" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity",
+    ]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.k3s.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.k3s_oidc_issuer_host_path}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.k3s_oidc_issuer_host_path}:sub"
+      values   = ["system:serviceaccount:external-secrets:eso-aws-auth"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "k3s_eso_auth_permissions" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+    resources = [local.k3s_eso_ssm_role_arn]
+  }
+}
+
+data "aws_iam_policy_document" "k3s_eso_ssm_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "AWS"
+      identifiers = [local.k3s_eso_auth_role_arn]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "k3s_eso_ssm_permissions" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+
+    resources = [local.k3s_eso_ssm_parameter_arn]
+  }
+}
+
+resource "aws_iam_role" "k3s_eso_auth" {
+  name               = var.k3s_eso_auth_role_name
+  assume_role_policy = data.aws_iam_policy_document.k3s_eso_auth_assume_role.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy" "k3s_eso_auth_assume_ssm" {
+  name   = "assume-ssm-parameter-read"
+  role   = aws_iam_role.k3s_eso_auth.id
+  policy = data.aws_iam_policy_document.k3s_eso_auth_permissions.json
+}
+
+resource "aws_iam_role" "k3s_eso_ssm" {
+  name               = var.k3s_eso_ssm_role_name
+  assume_role_policy = data.aws_iam_policy_document.k3s_eso_ssm_assume_role.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy" "k3s_eso_ssm_read" {
+  name   = "read-approved-ssm-parameters"
+  role   = aws_iam_role.k3s_eso_ssm.id
+  policy = data.aws_iam_policy_document.k3s_eso_ssm_permissions.json
 }
 
 # Reference existing EIP for nginx (managed outside Terraform, never destroyed)
