@@ -53,6 +53,21 @@ output "k3s_oidc_test_role_arn" {
   value       = aws_iam_role.k3s_oidc_test.arn
 }
 
+output "k3s_eso_auth_role_arn" {
+  description = "IAM role ARN trusted by the ESO Kubernetes service account through OIDC"
+  value       = aws_iam_role.k3s_eso_auth.arn
+}
+
+output "k3s_eso_ssm_role_arn" {
+  description = "IAM role ARN ESO assumes to read approved SSM parameters"
+  value       = aws_iam_role.k3s_eso_ssm.arn
+}
+
+output "k3s_eso_ssm_parameter_path" {
+  description = "SSM parameter path allowed to the ESO read role"
+  value       = var.k3s_eso_ssm_parameter_path
+}
+
 data "aws_ssm_parameter" "kubeconfig" {
   name            = var.ssm_kubeconfig_name
   with_decryption = true

@@ -46,8 +46,9 @@ The runtime integration will use:
 
 Applications will not receive long-lived AWS access keys or direct access to
 the AWS secret store. IAM policies must grant only the required SSM actions and
-parameter resources. New namespaces or parameter paths require an explicit
-reviewed change in the owning repository.
+parameter resources. The initial approved SSM path is
+`/kubernetes/appsecrets/`; new namespaces or parameter paths require an
+explicit reviewed change in the owning repository.
 
 The IaC repository owns the OIDC issuer prerequisites, public discovery and
 JWKS routes, AWS IAM provider, IAM roles, and IAM policies. The GitOps
