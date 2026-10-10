@@ -1,4 +1,4 @@
-# ADR 001: Use SSM Parameter Store for Secrets Management
+# ADR 001: Use SSM Parameter Store for Infrastructure Secrets
 
 - **Status:** Accepted
 - **Date:** 2025-07
@@ -15,7 +15,10 @@ These secrets must be shared between Terraform (provisioning time) and EC2 insta
 
 ## Decision
 
-Use **AWS Systems Manager Parameter Store** with `SecureString` type for all secrets.
+Use **AWS Systems Manager Parameter Store** with `SecureString` type for
+infrastructure and bootstrap secrets managed by Terraform, EC2 user data, and
+operator workflows. Kubernetes application runtime secrets are governed by
+[ADR 005](005-kubernetes-runtime-secrets.md).
 
 Terraform creates placeholder parameters during `apply`, EC2 instances read/write them via IAM instance profiles at boot, and Terraform reads them back as outputs.
 
