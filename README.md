@@ -200,6 +200,7 @@ The `scripts/` directory contains convenient helper scripts:
 |--------|---------|
 | `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
+| `use-kubeconfig.sh` | Fetch kubeconfig and export `KUBECONFIG` in the current shell |
 | `get-argocd-password.sh` | Retrieve ArgoCD admin password |
 | `healthcheck-infra.sh` | Run read-only checks for AWS, k3s, ArgoCD, nginx, and public OIDC endpoints |
 | `test-oidc.sh` | Test K3s-to-AWS OIDC federation and clean up temporary service accounts |
@@ -237,15 +238,15 @@ untouched.
 
 ### Accessing the Cluster
 
-Fetch the kubeconfig from SSM:
+Fetch the kubeconfig from SSM and set `KUBECONFIG` in the current shell:
 
 ```bash
-./scripts/get-kubeconfig.sh
-export KUBECONFIG=$(pwd)/kubeconfig.yaml
+source ./scripts/use-kubeconfig.sh
 ```
 
-The script runs in a child shell, so it cannot set `KUBECONFIG` in your current
-shell automatically. Run the export shown above before invoking `kubectl`.
+The wrapper must be sourced because a standalone script runs in a child shell and
+cannot modify the current shell's environment. `kubectl` can then use the context
+directly:
 
 Or manually:
 ```bash
