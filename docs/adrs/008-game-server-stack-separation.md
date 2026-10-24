@@ -16,9 +16,9 @@ both sets of resources, increasing lock contention and blast radius.
 Maintain **one Terraform root per domain**, each with its own state file in the
 same S3 backend bucket:
 
-- `homelab/`: state key `homelab/terraform.tfstate`. Contains the existing
-  K3s and nginx modules, moved from the repository root without changing the
-  state key.
+- `homelab/`: state key `state/terraform.tfstate` (unchanged from the existing
+  backend configuration). Contains the existing K3s and nginx modules, moved
+  from the repository root without changing the state key.
 - `game-servers/`: state key `game-servers/terraform.tfstate`. Contains the
   game server VPC, security group, instance, and EIP association.
 
