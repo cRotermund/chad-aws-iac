@@ -1,0 +1,82 @@
+variable "vpc_id" {
+  description = "VPC ID where the nginx instance will be deployed"
+  type        = string
+}
+
+variable "subnet_id" {
+  description = "Public subnet ID for the nginx instance"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "Instance type for the nginx ingress node"
+  type        = string
+  default     = "t4g.micro"
+}
+
+variable "ami_id" {
+  description = "AMI ID for the nginx ingress node (Amazon Linux 2023 arm64). Pinned so routine AMI releases do not replace the running node; update deliberately."
+  type        = string
+  default     = "ami-05ec9e26a9c82817a"
+}
+
+variable "nginx_package_version" {
+  description = "Exact nginx RPM version (name-version-release) installed by user data. A change replaces the node."
+  type        = string
+  default     = "1.30.5-1.amzn2023.0.1"
+}
+
+variable "ssm_agent_package_version" {
+  description = "Exact amazon-ssm-agent RPM version (name-version-release) used if the agent is missing. A change replaces the node."
+  type        = string
+  default     = "3.3.5226.0-1.amzn2023"
+}
+
+variable "eip_allocation_id" {
+  description = "Existing Elastic IP allocation ID to attach to nginx instance (required for static IP)"
+  type        = string
+}
+
+variable "k3s_server_private_ip" {
+  description = "Private IP address of the k3s server for upstream proxy configuration"
+  type        = string
+}
+
+variable "key_name" {
+  description = "Optional existing EC2 key pair name for SSH access"
+  type        = string
+  default     = ""
+}
+
+variable "ssh_allowed_cidrs" {
+  description = "List of CIDR blocks allowed SSH access (e.g. your workstation IP /32). Leave empty to disable SSH ingress."
+  type        = list(string)
+  default     = []
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "tls_certificate_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM server certificate"
+  type        = string
+}
+
+variable "tls_ca_bundle_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM CA bundle"
+  type        = string
+}
+
+variable "tls_private_key_parameter_name" {
+  description = "SSM SecureString parameter containing the PEM private key"
+  type        = string
+}
+
+variable "tls_kms_key_arn" {
+  description = "KMS key ARN used to encrypt the TLS SSM parameters"
+  type        = string
+  default     = "*"
+}

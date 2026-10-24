@@ -40,39 +40,35 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 
 ```
 .
-├── main.tf                    # Root module - data sources & k3s module invocation
-├── variables.tf               # Input variables (VPC ID, subnets, instance types, etc.)
-├── outputs.tf                 # Outputs (IPs, kubeconfig, resource IDs)
-├── providers.tf               # AWS & Random provider configuration
-├── backend.tf                 # S3 backend configuration (empty, use -backend-config)
-├── terraform.tfvars           # Your actual values (gitignored)
-├── terraform.tfvars.example   # Template for terraform.tfvars
-├── backend.hcl                # Backend config values (gitignored)
-├── backend.hcl.example        # Template for backend.hcl
-├── aws-config                 # AWS CLI config for profile (gitignored)
-├── aws-config.example         # Template for aws-config
-├── aws-credentials            # AWS credentials file (gitignored)
-├── aws-credentials.example    # Template for aws-credentials
-├── docs/                      # Additional documentation
-│   ├── adrs/                 # Architecture Decision Records
-│   └── sops/                 # SOPS configuration
-├── modules/
-│   ├── k3s-cluster/          # K3s cluster module
-│   │   ├── main.tf           # Security groups, IAM roles, EC2 instances
-│   │   ├── variables.tf      # Module inputs
-│   │   ├── outputs.tf        # Module outputs
-│   │   ├── user_data/        # Cloud-init scripts (server.sh, agent.sh)
-│   │   └── README.md         # Module documentation
-│   └── nginx-ingress/        # nginx load balancer/ingress module
-│       ├── main.tf           # Security groups, EC2 instance, EIP association
-│       ├── variables.tf      # Module inputs
-│       ├── outputs.tf        # Module outputs
-│       ├── user_data/        # Cloud-init script (nginx.sh)
-│       └── README.md         # Module documentation
+├── .gitattributes                # Enforces LF line endings for all text files
+├── AGENTS.md, CONTRIBUTING.md    # Contributor and agent guidelines
+├── README.md
+├── aws-config                    # AWS CLI profile config (gitignored)
+├── aws-config.example            # Template for aws-config
+├── aws-credentials               # AWS credentials file (gitignored)
+├── aws-credentials.example       # Template for aws-credentials
+├── backend.hcl.example           # Template for a stack's backend.hcl
+├── kubeconfig.yaml               # Written by get-kubeconfig.sh (gitignored)
+├── docs/
+│   ├── adrs/                     # Architecture Decision Records (index: README.md)
+│   └── sops/                     # Operational procedures (TLS certificates)
+├── homelab/                      # Homelab stack: K3s cluster and nginx ingress
+│   ├── main.tf, variables.tf, outputs.tf, providers.tf, backend.tf
+│   ├── terraform.tfvars.example  # Template for terraform.tfvars (gitignored)
+│   ├── terraform.tfvars          # Your values (gitignored)
+│   ├── backend.hcl               # Backend config for this stack (gitignored)
+│   └── modules/
+│       ├── k3s-cluster/          # K3s server and agent nodes
+│       └── nginx-ingress/        # nginx ingress node and EIP association
+├── game-servers/                 # Game server stack: VPC, Satisfactory server, EIP
+│   ├── main.tf, variables.tf, outputs.tf, providers.tf, backend.tf
+│   ├── terraform.tfvars.example  # Template for terraform.tfvars (gitignored)
+│   ├── terraform.tfvars          # Your values (gitignored)
+│   └── backend.hcl               # Backend config for this stack (gitignored)
 └── scripts/
-    ├── get-kubeconfig.sh     # Fetch kubeconfig from SSM
-    ├── start-cluster.sh      # Start EC2 instances
-    └── stop-cluster.sh       # Stop EC2 instances to save costs
+    ├── init.sh                   # Shared: AWS environment setup (source it)
+    ├── homelab/                  # Homelab operations: kubeconfig, SSH, start/stop, health checks
+    └── game-servers/             # Game server operations: start, stop, health check
 ```
 
 ## Initial Setup
@@ -97,10 +93,12 @@ Edit `aws-config` if you need to change region (default is `us-east-1`).
 
 ### 2. Configure Terraform Backend
 
+Homelab Terraform lives in `homelab/`. Run all Terraform commands from that directory (`cd homelab`).
+
 Copy the backend config template and fill in your S3 bucket details:
 
 ```bash
-cp backend.hcl.example backend.hcl
+cp backend.hcl.example homelab/backend.hcl
 ```
 
 Edit `backend.hcl` with your actual S3 bucket name and region:
@@ -122,10 +120,10 @@ terraform init -backend-config=backend.hcl
 Copy the variables template and provide your infrastructure IDs:
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
+cp terraform.tfvars.example homelab/terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and set:
+Edit `homelab/terraform.tfvars` and set:
 - `vpc_id`: Your existing VPC ID
 - `public_subnet_ids`: List of 2+ public subnet IDs (must have internet access)
 - `key_name`: Your EC2 key pair name (optional, for SSH access)
@@ -182,10 +180,17 @@ After cloning this repository on a new machine:
    This exports `AWS_PROFILE` and `AWS_REGION` so you don't need to specify them in every command.
 
 3. **Ensure you have the SSH key:**
-   The EC2 key pair private key (`chad-k3s.pem`) is not stored in AWS. You'll need to obtain it through your secure distribution method (1Password, secure file share, etc.) and place it at `~/chad-k3s.pem` with proper permissions:
+   The EC2 key pair private key (`chad-k3s.pem`) is not stored in AWS. You'll need to obtain it through your secure distribution method (1Password, secure file share, etc.) and place it at `~/.ssh/chad-k3s.pem` with proper permissions:
    ```bash
-   chmod 600 ~/chad-k3s.pem
+   chmod 600 ~/.ssh/chad-k3s.pem
    ```
+
+   **Key pair SOP (applies to every stack):** key pairs are created in AWS with the CLI and referenced by name (`key_name`); Terraform does not manage them. The private key is saved once as `~/.ssh/<key-name>.pem` with `chmod 600`. Create one with:
+   ```bash
+   aws ec2 create-key-pair --key-name <key-name> --key-type rsa --key-format pem --query KeyMaterial --output text > ~/.ssh/<key-name>.pem
+   chmod 600 ~/.ssh/<key-name>.pem
+   ```
+   The game server uses `chad-game-servers`. The homelab uses `chad-k3s`.
 
 4. **Initialize Terraform:**
    ```bash
@@ -199,6 +204,7 @@ The `scripts/` directory contains convenient helper scripts:
 | Script | Purpose |
 |--------|---------|
 | `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
+| `purge-known-hosts.sh` | Remove `known_hosts` entries for rebuilt instances, using the stack outputs (`--dry-run` to preview) |
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
 | `use-kubeconfig.sh` | Fetch kubeconfig and export `KUBECONFIG` in the current shell |
 | `get-argocd-password.sh` | Retrieve ArgoCD admin password |
@@ -215,7 +221,7 @@ The `scripts/` directory contains convenient helper scripts:
 Run the read-only infrastructure health check from the repository root:
 
 ```bash
-./scripts/healthcheck-infra.sh
+./scripts/homelab/healthcheck-infra.sh
 ```
 
 The script checks AWS instance state and status, Kubernetes API request serving
@@ -226,7 +232,7 @@ fails.
 Run the OIDC federation test after applying the IAM provider and test role:
 
 ```bash
-./scripts/test-oidc.sh
+./scripts/homelab/test-oidc.sh
 ```
 
 The test verifies that the trusted `default/aws-test` service account can assume
@@ -241,7 +247,7 @@ untouched.
 Fetch the kubeconfig from SSM and set `KUBECONFIG` in the current shell:
 
 ```bash
-source ./scripts/use-kubeconfig.sh
+source ./scripts/homelab/use-kubeconfig.sh
 ```
 
 The wrapper must be sourced because a standalone script runs in a child shell and
@@ -264,13 +270,13 @@ kubectl get nodes
 **Stop instances when not in use** (you only pay for EBS storage when stopped):
 
 ```bash
-./scripts/stop-cluster.sh
+./scripts/homelab/stop-cluster.sh
 ```
 
 **Start instances when needed:**
 
 ```bash
-./scripts/start-cluster.sh
+./scripts/homelab/start-cluster.sh
 ```
 
 **Note:** The scripts manage K3s nodes and the nginx ingress node. All three instances are stopped/started together.
@@ -282,9 +288,9 @@ The kubeconfig remains valid across restarts if using an Elastic IP. Otherwise, 
 If you configured `key_name` and `ssh_allowed_cidrs`:
 
 Convenience scripts are provided for quick SSH access (see [Helper Scripts](#helper-scripts)):
-- `./scripts/ssh-k3s-server.sh` — SSH into the K3s server node
-- `./scripts/ssh-k3s-agent.sh` — SSH into the K3s agent node
-- `./scripts/ssh-nginx.sh` — SSH into the nginx ingress node
+- `./scripts/homelab/ssh-k3s-server.sh` — SSH into the K3s server node
+- `./scripts/homelab/ssh-k3s-agent.sh` — SSH into the K3s agent node
+- `./scripts/homelab/ssh-nginx.sh` — SSH into the nginx ingress node
 
 Or use manual commands:
 
@@ -309,7 +315,7 @@ sudo journalctl -u k3s-agent -f  # On agent
 
 The nginx ingress node provides a dedicated load balancer with the static IP. TLS is terminated on nginx for `apis.rotorlabs.io`, `admin.rotorlabs.io`, and `apps.rotorlabs.io`.
 
-TLS certificate generation, validation, SSM deployment, renewal, rollback, and troubleshooting are documented in the [rotorlabs SSL certificate SOP](docs/sops/ssl/rotorlabs/README.md). Use `scripts/rotate-nginx-tls.sh` for certificate deployment and rotation rather than replacing the Nginx instance.
+TLS certificate generation, validation, SSM deployment, renewal, rollback, and troubleshooting are documented in the [rotorlabs SSL certificate SOP](docs/sops/ssl/rotorlabs/README.md). Use `scripts/homelab/rotate-nginx-tls.sh` for certificate deployment and rotation rather than replacing the Nginx instance.
 
 **Access your cluster:**
 ```bash
@@ -359,7 +365,7 @@ ArgoCD is automatically installed on the K3s server during first boot for GitOps
 ```bash
 # Ensure DNS points admin.rotorlabs.io to the nginx server's Elastic IP
 # Get the admin password
-./scripts/get-argocd-password.sh
+./scripts/homelab/get-argocd-password.sh
 
 # Open in browser
 https://admin.rotorlabs.io/argocd
@@ -419,7 +425,7 @@ argocd account update-password --current-password $(terraform output -raw argocd
 
 ## Key Features & Design Decisions
 
-Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
+Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/README.md). See the [ADR index](docs/adrs/README.md) for the full list and status.
 
 | ADR | Decision |
 |-----|----------|
@@ -428,6 +434,10 @@ Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
 | [003](docs/adrs/003-nginx-self-managed-ingress.md) | Self-managed nginx as ingress over managed load balancers |
 | [004](docs/adrs/004-network-security-model.md) | Two-security-group network model |
 | [005](docs/adrs/005-kubernetes-runtime-secrets.md) | External Secrets Operator for Kubernetes runtime secrets |
+| [006](docs/adrs/006-kubernetes-api-ingress.md) | Restricted external Kubernetes API access |
+| [007](docs/adrs/007-game-server-network-isolation.md) | Game server network isolation (separate VPC) |
+| [008](docs/adrs/008-game-server-stack-separation.md) | Separate Terraform stacks for homelab and game servers |
+| [009](docs/adrs/009-game-server-compute-platform.md) | Game server compute platform (single EC2 instance) |
 
 ### Implementation Details
 

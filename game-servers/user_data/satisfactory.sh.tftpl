@@ -1,0 +1,276 @@
+#!/bin/bash
+# Satisfactory dedicated server bootstrap. EC2 user data: runs once, at first boot.
+#
+# Rendered by Terraform (templatefile). Use $VAR shell syntax only. Braces-style
+# dollar expansion and percent-brace directives are Terraform template syntax.
+#
+# Where to look when something fails:
+#   /var/log/satisfactory-bootstrap.log   this script, one line per action, with a
+#                                         "=== STEP START/OK/FAILED" marker per step
+#   /var/log/cloud-init-output.log        full cloud-init output (includes this script)
+#   /var/lib/satisfactory/bootstrap-status  SUCCESS, PARTIAL: <reason>, or FAILED: <step>
+#   journalctl -u satisfactory            game server stdout and stderr
+#   /home/steam/SatisfactoryDedicatedServer/FactoryGame/Saved/Logs/FactoryGame.log
+#                                         game server log (rotated on each start)
+#
+# Inputs come from game-servers/variables.tf (app ID, ports). Changing any of them
+# replaces the instance (user_data_replace_on_change).
+
+set -Eeuo pipefail
+
+# ---- configuration (rendered by Terraform) -------------------------------------
+APP_ID="${satisfactory_app_id}"
+GAME_PORT="${game_port}"
+RELIABLE_PORT="${reliable_port}"
+
+# SteamCMD's official Linux bootstrap. It updates itself on first run, so it is not pinned.
+STEAMCMD_URL=https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+
+# ---- fixed paths ----------------------------------------------------------------
+LOG_FILE=/var/log/satisfactory-bootstrap.log
+STATUS_DIR=/var/lib/satisfactory
+STATUS_FILE=$STATUS_DIR/bootstrap-status
+STEAM_USER=steam
+STEAM_HOME=/home/steam
+STEAMCMD_DIR=$STEAM_HOME/steamcmd
+INSTALL_DIR=$STEAM_HOME/SatisfactoryDedicatedServer
+SERVICE_NAME=satisfactory
+BOOTSTRAP_START=$(date +%s)
+
+touch "$LOG_FILE"
+chmod 0640 "$LOG_FILE"
+# Mirror everything (stdout and stderr, including the ERR trap) to the log file.
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ---- logging helpers -----------------------------------------------------------
+ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+info() { printf '%s [INFO ] %s\n' "$(ts)" "$*"; }
+warn() { printf '%s [WARN ] %s\n' "$(ts)" "$*"; }
+err() { printf '%s [ERROR] %s\n' "$(ts)" "$*"; }
+
+write_status() {
+  mkdir -p "$STATUS_DIR"
+  printf '%s\n' "$1" > "$STATUS_FILE"
+}
+
+CURRENT_STEP="startup"
+STEP_START=$BOOTSTRAP_START
+
+step() {
+  CURRENT_STEP="$1"
+  STEP_START=$(date +%s)
+  write_status "RUNNING: $CURRENT_STEP"
+  info "=== STEP START: $CURRENT_STEP"
+}
+
+step_ok() {
+  info "=== STEP OK: $CURRENT_STEP ($(( $(date +%s) - STEP_START ))s)"
+}
+
+# Stop the bootstrap with a clear reason. Used for checks that must not continue.
+fail() {
+  err "$*"
+  err "=== STEP FAILED: $CURRENT_STEP"
+  write_status "FAILED: $CURRENT_STEP"
+  exit 1
+}
+
+on_error() {
+  local rc=$?
+  err "Command failed (exit $rc) at line $1: $2"
+  err "=== STEP FAILED: $CURRENT_STEP"
+  err "Next: tail -n 200 $LOG_FILE ; systemctl status $SERVICE_NAME --no-pager ; journalctl -u $SERVICE_NAME --no-pager -n 200"
+  write_status "FAILED: $CURRENT_STEP"
+  exit "$rc"
+}
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+
+# Retry a command up to N times with growing back-off. Logs each failed attempt.
+retry() {
+  local attempts=$1
+  shift
+  local i
+  for i in $(seq 1 "$attempts"); do
+    if "$@"; then
+      return 0
+    fi
+    warn "attempt $i/$attempts failed: $*"
+    sleep $((i * 10))
+  done
+  return 1
+}
+
+write_status "RUNNING: $CURRENT_STEP"
+info "Satisfactory bootstrap started (app $APP_ID, ports $GAME_PORT/udp+tcp and $RELIABLE_PORT/tcp)"
+
+# ---- 1. host identity and resources --------------------------------------------
+step "host: identify instance and resources"
+. /etc/os-release
+info "OS: $PRETTY_NAME"
+info "Kernel: $(uname -r), arch: $(uname -m)"
+[ "$(uname -m)" = "x86_64" ] || fail "Satisfactory ships x86_64 binaries only; this host is $(uname -m)"
+info "Disk: $(df -h / | tail -n 1)"
+info "Memory: $(free -m | awk '/^Mem:/ {print $2 " MiB total, " $7 " MiB available"}')"
+
+IMDS_TOKEN=$(curl -fsS -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 300" http://169.254.169.254/latest/api/token)
+imds() { curl -fsS -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" "http://169.254.169.254/latest/meta-data/$1"; }
+info "Instance ID: $(imds instance-id)"
+info "Instance type: $(imds instance-type)"
+info "Availability zone: $(imds placement/availability-zone)"
+info "Private IP: $(imds local-ipv4)"
+info "Public IP at boot: $(imds public-ipv4 || echo none)"
+step_ok
+
+# ---- 2. OS packages -------------------------------------------------------------
+step "packages: apt update and install prerequisites"
+export DEBIAN_FRONTEND=noninteractive
+retry 5 apt-get update
+# lib32gcc-s1 and lib32stdc++6 are the 32-bit runtime libraries SteamCMD needs.
+retry 3 apt-get install -y --no-install-recommends ca-certificates curl tar xz-utils lib32gcc-s1 lib32stdc++6
+info "Installed: curl $(dpkg-query -W -f='$${Version}' curl), lib32gcc-s1 $(dpkg-query -W -f='$${Version}' lib32gcc-s1)"
+step_ok
+
+# Optional: the wiki's fix for "SDL not found" / "Failed to set thread priority".
+# Failure here only means the warning remains; it does not block the server.
+step "packages: optional 32-bit SDL (wiki: SDL priority manager warnings)"
+if dpkg --add-architecture i386 \
+  && retry 3 apt-get update \
+  && retry 3 apt-get install -y --no-install-recommends libsdl2-2.0-0:i386; then
+  step_ok
+else
+  warn "libsdl2-2.0-0:i386 not installed; expect 'SDL not found' warnings in the server log"
+  step_ok
+fi
+
+# ---- 3. service user ------------------------------------------------------------
+step "user: ensure service user '$STEAM_USER' exists"
+if ! id -u "$STEAM_USER" >/dev/null 2>&1; then
+  useradd --create-home --home-dir "$STEAM_HOME" --shell /bin/bash "$STEAM_USER"
+  info "Created user $STEAM_USER"
+else
+  info "User $STEAM_USER already exists"
+fi
+step_ok
+
+# ---- 4. SteamCMD ----------------------------------------------------------------
+step "steamcmd: download and extract"
+TMP_DIR=$(mktemp -d)
+retry 5 curl -fsSL -o "$TMP_DIR/steamcmd_linux.tar.gz" "$STEAMCMD_URL"
+install -d -o "$STEAM_USER" -g "$STEAM_USER" "$STEAMCMD_DIR"
+tar -xzf "$TMP_DIR/steamcmd_linux.tar.gz" -C "$STEAMCMD_DIR"
+chown -R "$STEAM_USER:$STEAM_USER" "$STEAMCMD_DIR"
+rm -rf "$TMP_DIR"
+step_ok
+
+step "steamcmd: first run (SteamCMD updates its own runtime)"
+retry 3 runuser -u "$STEAM_USER" -- "$STEAMCMD_DIR/steamcmd.sh" +quit
+step_ok
+
+# ---- 5. Satisfactory dedicated server -------------------------------------------
+step "satisfactory: install or update app $APP_ID (validate)"
+install -d -o "$STEAM_USER" -g "$STEAM_USER" "$INSTALL_DIR"
+retry 3 runuser -u "$STEAM_USER" -- "$STEAMCMD_DIR/steamcmd.sh" \
+  +force_install_dir "$INSTALL_DIR" \
+  +login anonymous \
+  +app_update "$APP_ID" validate \
+  +quit
+step_ok
+
+step "satisfactory: verify installed build"
+test -x "$INSTALL_DIR/FactoryServer.sh" || fail "FactoryServer.sh not found or not executable in $INSTALL_DIR"
+MANIFEST=$(find "$STEAM_HOME" -name "appmanifest_$APP_ID.acf" 2>/dev/null | head -n 1 || true)
+if [ -n "$MANIFEST" ]; then
+  BUILD_ID=$(grep -E '"buildid"' "$MANIFEST" | tr -d '"\t ' | sed 's/buildid//' || true)
+  info "Installed build ID: $BUILD_ID (from $MANIFEST)"
+else
+  warn "appmanifest_$APP_ID.acf not found; build ID unknown"
+fi
+step_ok
+
+# ---- 6. steamclient.so for the server's SteamAPI_Init (wiki: SteamAPI_Init errors) ---
+step "steamclient: link steamclient.so where the server looks for it"
+SDK_SRC="$STEAMCMD_DIR/linux64/steamclient.so"
+if [ -f "$SDK_SRC" ]; then
+  install -d -o "$STEAM_USER" -g "$STEAM_USER" "$STEAM_HOME/.steam/sdk64"
+  ln -sfn "$SDK_SRC" "$STEAM_HOME/.steam/sdk64/steamclient.so"
+  chown -h "$STEAM_USER:$STEAM_USER" "$STEAM_HOME/.steam/sdk64/steamclient.so"
+  info "Linked $STEAM_HOME/.steam/sdk64/steamclient.so -> $SDK_SRC"
+else
+  warn "$SDK_SRC not found; SteamAPI_Init may fail. Check $STEAMCMD_DIR/linux64/"
+fi
+step_ok
+
+# ---- 7. systemd service ---------------------------------------------------------
+# The ports come from Terraform variables, so the unit matches the security group.
+# KillSignal=SIGINT is the wiki's graceful shutdown, so the server saves on stop.
+step "service: install and start $SERVICE_NAME.service"
+cat > "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
+[Unit]
+Description=Satisfactory dedicated server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$STEAM_USER
+Group=$STEAM_USER
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$INSTALL_DIR/FactoryServer.sh -Port=$GAME_PORT -ReliablePort=$RELIABLE_PORT -log -unattended
+KillSignal=SIGINT
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+chmod 0644 "/etc/systemd/system/$SERVICE_NAME.service"
+systemctl daemon-reload
+systemctl enable --now "$SERVICE_NAME.service"
+info "systemctl is-active: $(systemctl is-active "$SERVICE_NAME.service" || true)"
+step_ok
+
+# ---- 8. readiness: wait for the game's sockets ----------------------------------
+# The server takes a few minutes to bind on first start. A missing socket is
+# recorded as PARTIAL with the reason, not as a failed bootstrap, so the host
+# stays up for inspection.
+step "readiness: wait for TCP $GAME_PORT, TCP $RELIABLE_PORT and UDP $GAME_PORT"
+READY=0
+for i in $(seq 1 90); do
+  TCP_GAME=$(ss -Hltn "sport = :$GAME_PORT" | wc -l)
+  TCP_RELIABLE=$(ss -Hltn "sport = :$RELIABLE_PORT" | wc -l)
+  UDP_GAME=$(ss -Hlun "sport = :$GAME_PORT" | wc -l)
+  info "readiness attempt $i/90: tcp/$GAME_PORT=$TCP_GAME tcp/$RELIABLE_PORT=$TCP_RELIABLE udp/$GAME_PORT=$UDP_GAME"
+  if [ "$TCP_GAME" -gt 0 ] && [ "$TCP_RELIABLE" -gt 0 ] && [ "$UDP_GAME" -gt 0 ]; then
+    READY=1
+    break
+  fi
+  if ! systemctl is-active --quiet "$SERVICE_NAME.service"; then
+    warn "$SERVICE_NAME.service is not active; stopping readiness wait"
+    break
+  fi
+  sleep 10
+done
+if [ "$READY" -eq 1 ]; then
+  info "All game sockets are listening"
+  step_ok
+  STATUS_RESULT="SUCCESS"
+else
+  warn "Game sockets did not all come up. Check: journalctl -u $SERVICE_NAME --no-pager -n 200 and the FactoryGame.log path in the header"
+  step_ok
+  STATUS_RESULT="PARTIAL: game sockets not listening (see readiness log lines)"
+fi
+
+# ---- 9. summary -----------------------------------------------------------------
+step "summary"
+info "Service: $(systemctl is-active "$SERVICE_NAME.service" || true)"
+info "Listening sockets for $GAME_PORT and $RELIABLE_PORT:"
+ss -lntup | grep -E ":($GAME_PORT|$RELIABLE_PORT) " | sed 's/^/    /' || info "    none"
+info "Game log: $INSTALL_DIR/FactoryGame/Saved/Logs/FactoryGame.log"
+info "Total bootstrap time: $(( $(date +%s) - BOOTSTRAP_START ))s"
+step_ok
+
+write_status "$STATUS_RESULT"
+info "Bootstrap finished: $STATUS_RESULT"

@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars (gitignored) and set your values.
+
+# SSH key pair: created in AWS with `aws ec2 create-key-pair` (RSA, PEM) and saved to
+# ~/.ssh/chad-game-servers.pem (chmod 600). Same SOP as the homelab key.
+key_name = "chad-game-servers"
+
+# Your workstation IP as a /32 for SSH access.
+ssh_allowed_cidrs = ["203.0.113.10/32"]
+
+# Existing Elastic IP allocation to bring under management (keeps the current public IP).
+eip_allocation_id = "eipalloc-0440bfb93a0c4ce6d"
+
+# Optional overrides:
+# root_volume_size_gb = 16
+# instance_type       = "m6a.xlarge"
