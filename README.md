@@ -40,39 +40,34 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 
 ```
 .
-├── main.tf                    # Root module - data sources & k3s module invocation
-├── variables.tf               # Input variables (VPC ID, subnets, instance types, etc.)
-├── outputs.tf                 # Outputs (IPs, kubeconfig, resource IDs)
-├── providers.tf               # AWS & Random provider configuration
-├── backend.tf                 # S3 backend configuration (empty, use -backend-config)
-├── terraform.tfvars           # Your actual values (gitignored)
-├── terraform.tfvars.example   # Template for terraform.tfvars
-├── backend.hcl                # Backend config values (gitignored)
-├── backend.hcl.example        # Template for backend.hcl
-├── aws-config                 # AWS CLI config for profile (gitignored)
-├── aws-config.example         # Template for aws-config
-├── aws-credentials            # AWS credentials file (gitignored)
-├── aws-credentials.example    # Template for aws-credentials
-├── docs/                      # Additional documentation
-│   ├── adrs/                 # Architecture Decision Records
-│   └── sops/                 # SOPS configuration
-├── modules/
-│   ├── k3s-cluster/          # K3s cluster module
-│   │   ├── main.tf           # Security groups, IAM roles, EC2 instances
-│   │   ├── variables.tf      # Module inputs
-│   │   ├── outputs.tf        # Module outputs
-│   │   ├── user_data/        # Cloud-init scripts (server.sh, agent.sh)
-│   │   └── README.md         # Module documentation
-│   └── nginx-ingress/        # nginx load balancer/ingress module
-│       ├── main.tf           # Security groups, EC2 instance, EIP association
-│       ├── variables.tf      # Module inputs
-│       ├── outputs.tf        # Module outputs
-│       ├── user_data/        # Cloud-init script (nginx.sh)
-│       └── README.md         # Module documentation
+├── .gitattributes                # Enforces LF line endings for all text files
+├── AGENTS.md, CONTRIBUTING.md    # Contributor and agent guidelines
+├── README.md
+├── aws-config                    # AWS CLI profile config (gitignored)
+├── aws-config.example            # Template for aws-config
+├── aws-credentials               # AWS credentials file (gitignored)
+├── aws-credentials.example       # Template for aws-credentials
+├── backend.hcl.example           # Template for a stack's backend.hcl
+├── kubeconfig.yaml               # Written by get-kubeconfig.sh (gitignored)
+├── docs/
+│   ├── adrs/                     # Architecture Decision Records (index: README.md)
+│   └── sops/                     # Operational procedures (TLS certificates)
+├── homelab/                      # Homelab stack: K3s cluster and nginx ingress
+│   ├── main.tf, variables.tf, outputs.tf, providers.tf, backend.tf
+│   ├── terraform.tfvars.example  # Template for terraform.tfvars (gitignored)
+│   ├── terraform.tfvars          # Your values (gitignored)
+│   ├── backend.hcl               # Backend config for this stack (gitignored)
+│   └── modules/
+│       ├── k3s-cluster/          # K3s server and agent nodes
+│       └── nginx-ingress/        # nginx ingress node and EIP association
+├── game-servers/                 # Game server stack: VPC, Satisfactory server, EIP
+│   ├── main.tf, variables.tf, outputs.tf, providers.tf, backend.tf
+│   ├── terraform.tfvars.example  # Template for terraform.tfvars (gitignored)
+│   ├── terraform.tfvars          # Your values (gitignored)
+│   └── backend.hcl               # Backend config for this stack (gitignored)
 └── scripts/
-    ├── get-kubeconfig.sh     # Fetch kubeconfig from SSM
-    ├── start-cluster.sh      # Start EC2 instances
-    └── stop-cluster.sh       # Stop EC2 instances to save costs
+    ├── init.sh                   # Shared: AWS environment setup (source it)
+    └── homelab/                  # Homelab operations: kubeconfig, SSH, start/stop, health checks
 ```
 
 ## Initial Setup
