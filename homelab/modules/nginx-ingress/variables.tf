@@ -20,6 +20,18 @@ variable "ami_id" {
   default     = "ami-05ec9e26a9c82817a"
 }
 
+variable "nginx_package_version" {
+  description = "Exact nginx RPM version (name-version-release) installed by user data. A change replaces the node."
+  type        = string
+  default     = "1.30.5-1.amzn2023.0.1"
+}
+
+variable "ssm_agent_package_version" {
+  description = "Exact amazon-ssm-agent RPM version (name-version-release) used if the agent is missing. A change replaces the node."
+  type        = string
+  default     = "3.3.5226.0-1.amzn2023"
+}
+
 variable "eip_allocation_id" {
   description = "Existing Elastic IP allocation ID to attach to nginx instance (required for static IP)"
   type        = string

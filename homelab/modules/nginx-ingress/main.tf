@@ -67,6 +67,8 @@ locals {
     tls_certificate_parameter = var.tls_certificate_parameter_name
     tls_ca_bundle_parameter   = var.tls_ca_bundle_parameter_name
     tls_private_key_parameter = var.tls_private_key_parameter_name
+    nginx_package_version     = var.nginx_package_version
+    ssm_agent_package_version = var.ssm_agent_package_version
   })
 }
 

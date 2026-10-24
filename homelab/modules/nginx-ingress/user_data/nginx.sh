@@ -3,9 +3,9 @@ set -euo pipefail
 
 # The certificate and key are provisioned out-of-band into SSM SecureString
 # parameters. This keeps the private key out of Terraform and user_data.
-dnf install -y nginx
+dnf install -y nginx-${nginx_package_version}
 if ! command -v amazon-ssm-agent >/dev/null 2>&1; then
-    dnf install -y amazon-ssm-agent
+    dnf install -y amazon-ssm-agent-${ssm_agent_package_version}
 fi
 command -v aws >/dev/null 2>&1 || { echo "AWS CLI is required to retrieve TLS parameters" >&2; exit 1; }
 systemctl enable --now amazon-ssm-agent

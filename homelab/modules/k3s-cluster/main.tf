@@ -191,6 +191,8 @@ locals {
     ssm_argocd_password_name = var.ssm_argocd_password_name
     service_account_issuer   = var.service_account_issuer
     server_public_ip         = local.server_public_ip
+    k3s_version              = var.k3s_version
+    awscli_package_version   = var.awscli_package_version
   })
 }
 
@@ -225,8 +227,10 @@ resource "aws_eip_association" "server_eip" {
 locals {
   agent_subnet_id = length(var.subnet_ids) > 1 ? var.subnet_ids[1] : local.server_subnet_id
   user_data_agent = templatefile("${path.module}/user_data/agent.sh", {
-    ssm_token_name        = var.ssm_token_name
-    k3s_server_private_ip = aws_instance.server.private_ip
+    ssm_token_name         = var.ssm_token_name
+    k3s_server_private_ip  = aws_instance.server.private_ip
+    k3s_version            = var.k3s_version
+    awscli_package_version = var.awscli_package_version
   })
 }
 

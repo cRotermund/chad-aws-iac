@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Install AWS CLI if not present
-command -v aws >/dev/null 2>&1 || (dnf install -y awscli || yum install -y awscli)
+command -v aws >/dev/null 2>&1 || dnf install -y awscli-2-${awscli_package_version}
 
 # Wait for IAM instance profile credentials to be available
 echo "Waiting for IAM credentials to be available..." > /var/log/k3s-agent-install.log
@@ -20,5 +20,5 @@ TOKEN=$(aws ssm get-parameter --name ${ssm_token_name} --with-decryption --query
 
 # Install K3s in agent mode, connecting to the server
 echo "Installing k3s agent..." >> /var/log/k3s-agent-install.log
-curl -sfL https://get.k3s.io | K3S_URL="https://${k3s_server_private_ip}:6443" K3S_TOKEN="$TOKEN" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" K3S_URL="https://${k3s_server_private_ip}:6443" K3S_TOKEN="$TOKEN" sh -
 echo "k3s agent installed (SSM token)" >> /var/log/k3s-agent-install.log

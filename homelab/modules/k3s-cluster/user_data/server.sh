@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Install AWS CLI if not present
-command -v aws >/dev/null 2>&1 || (dnf install -y awscli || yum install -y awscli)
+command -v aws >/dev/null 2>&1 || dnf install -y awscli-2-${awscli_package_version}
 
 # Wait for IAM instance profile credentials to be available
 echo "Waiting for IAM credentials to be available..." > /var/log/k3s-install.log
@@ -38,7 +38,7 @@ fi
 # Install K3s in server mode. The discovery and JWKS endpoints are public
 # OIDC metadata endpoints, while other Kubernetes API access remains governed
 # by the normal authentication and authorization configuration.
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer} --kube-apiserver-arg=service-account-jwks-uri=${service_account_issuer}/openid/v1/jwks --kube-apiserver-arg=anonymous-auth=true" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" INSTALL_K3S_EXEC="--write-kubeconfig-mode 644 --token $TOKEN --tls-san $PUBLIC_IP --kube-apiserver-arg=service-account-issuer=${service_account_issuer} --kube-apiserver-arg=service-account-jwks-uri=${service_account_issuer}/openid/v1/jwks --kube-apiserver-arg=anonymous-auth=true" sh -
 echo "k3s server installed (SSM token)" >> /var/log/k3s-install.log
 
 # Wait for k3s to be ready (kubeconfig file exists and is valid)

@@ -20,6 +20,18 @@ variable "ami_id" {
   default     = "ami-05ec9e26a9c82817a"
 }
 
+variable "k3s_version" {
+  description = "Exact K3s release installed on server and agent nodes (INSTALL_K3S_VERSION). A change replaces the nodes."
+  type        = string
+  default     = "v1.36.5+k3s1"
+}
+
+variable "awscli_package_version" {
+  description = "Exact awscli-2 RPM version (name-version-release) used if the AWS CLI is missing. A change replaces the nodes."
+  type        = string
+  default     = "2.36.47-4.amzn2023.0.1"
+}
+
 variable "server_eip_allocation_id" {
   type    = string
   default = ""
