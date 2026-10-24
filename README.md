@@ -204,6 +204,7 @@ The `scripts/` directory contains convenient helper scripts:
 | Script | Purpose |
 |--------|---------|
 | `init.sh` | Source this to set AWS environment variables (`source ./scripts/init.sh`) |
+| `purge-known-hosts.sh` | Remove `known_hosts` entries for rebuilt instances, using the stack outputs (`--dry-run` to preview) |
 | `get-kubeconfig.sh` | Fetch kubeconfig from SSM and save locally |
 | `use-kubeconfig.sh` | Fetch kubeconfig and export `KUBECONFIG` in the current shell |
 | `get-argocd-password.sh` | Retrieve ArgoCD admin password |
