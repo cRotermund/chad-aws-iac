@@ -29,7 +29,7 @@ in the `game-servers` stack, rather than as a workload on the K3s cluster.
   Data is recreated, not preserved, during the rebuild.
 - **Metadata:** IMDSv2 required.
 - **Access:** SSH key pair and `ssh_allowed_cidrs`, as in the homelab.
-- **Public IP:** Terraform-owned EIP, per [ADR 007](007-game-server-network-isolation.md).
+- **Public IP:** Externally managed EIP bound by Terraform, per [ADR 007](007-game-server-network-isolation.md).
 
 Multiple game servers would be declared as additional instances in the same
 stack. An Auto Scaling group is not required for the current use case.

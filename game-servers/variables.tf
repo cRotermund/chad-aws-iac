@@ -75,6 +75,6 @@ variable "root_volume_size_gb" {
 }
 
 variable "eip_allocation_id" {
-  description = "Existing Elastic IP allocation ID to bring under Terraform management (import). Keeps the current public IP."
+  description = "Existing Elastic IP allocation ID for the game server. Managed outside Terraform (never created or released here), matching the homelab."
   type        = string
 }

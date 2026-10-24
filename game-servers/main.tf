@@ -129,27 +129,14 @@ resource "aws_instance" "satisfactory" {
   }
 }
 
-# The EIP is owned by this stack and imported from the existing allocation so the
-# current public IP is kept. prevent_destroy guards against releasing it accidentally.
-import {
-  to = aws_eip.satisfactory
+# The EIP is created and released outside Terraform, matching the homelab. This stack
+# only looks it up and binds it to the instance; destroying the stack never releases it.
+data "aws_eip" "satisfactory" {
   id = var.eip_allocation_id
 }
 
-resource "aws_eip" "satisfactory" {
-  domain = "vpc"
-
-  tags = {
-    Name = "satisfactory-eip"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 resource "aws_eip_association" "satisfactory" {
-  allocation_id       = aws_eip.satisfactory.id
+  allocation_id       = data.aws_eip.satisfactory.id
   instance_id         = aws_instance.satisfactory.id
   allow_reassociation = true
 }

@@ -14,13 +14,13 @@ output "satisfactory_instance_id" {
 }
 
 output "satisfactory_public_ip" {
-  description = "Satisfactory public IP (Terraform-owned EIP)"
-  value       = aws_eip.satisfactory.public_ip
+  description = "Satisfactory public IP (externally managed EIP)"
+  value       = data.aws_eip.satisfactory.public_ip
 }
 
 output "satisfactory_eip_allocation_id" {
   description = "Satisfactory EIP allocation ID"
-  value       = aws_eip.satisfactory.id
+  value       = data.aws_eip.satisfactory.id
 }
 
 output "satisfactory_security_group_id" {

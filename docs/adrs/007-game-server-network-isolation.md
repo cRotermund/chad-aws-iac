@@ -23,17 +23,13 @@ Place game servers in a **dedicated VPC in the same AWS account and region**
   Gateway, which avoids a fixed hourly cost.
 - **Ingress:** A dedicated security group opens only the game's required ports
   (TCP/UDP) to the internet, and SSH only from `ssh_allowed_cidrs`.
-- **Public IP:** The `game-servers` stack owns the game server's Elastic IP as
-  an `aws_eip` resource. It is not a data-source reference to an externally
-  managed address. The existing allocation (`eipalloc-0440bfb93a0c4ce6d`) is
-  brought under management with an `import` block so the current public IP is
-  kept. If the address is ever released, a new one is allocated and the public
-  IP changes; any DNS records or client configuration would need updating.
-  The resource carries `lifecycle { prevent_destroy = true }` so a routine
-  destroy cannot release it accidentally. Removing the stack's EIP requires
-  deliberately removing that guard first. This is a deliberate departure from
-  the externally managed EIP pattern used for nginx in
-  [ADR 004](004-network-security-model.md).
+- **Public IP:** The game server's Elastic IP is created and released outside
+  Terraform, matching the homelab pattern in [ADR 004](004-network-security-model.md).
+  The `game-servers` stack looks it up with a `data "aws_eip"` block by
+  allocation ID and binds it to the instance with `aws_eip_association`. Destroying
+  the stack removes only the association; the address stays allocated and the
+  public IP (`54.84.19.91`) is preserved. The stack does not track the EIP in
+  state, so it cannot release it.
 - **Cost tracking:** Resources are tagged through provider `default_tags`
   (`Project = "game-servers"`), and the tag is activated as a cost allocation
   tag in the Billing console.
