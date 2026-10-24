@@ -61,23 +61,6 @@ resource "aws_security_group_rule" "egress_all" {
 # nginx ingress EC2 instance
 ###############################################
 
-data "aws_ami" "amazon_linux_arm" {
-  owners      = ["amazon"]
-  most_recent = true
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*arm64"]
-  }
-  filter {
-    name   = "architecture"
-    values = ["arm64"]
-  }
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
-}
-
 locals {
   user_data_nginx = templatefile("${path.module}/user_data/nginx.sh", {
     k3s_server_private_ip     = var.k3s_server_private_ip
@@ -147,7 +130,7 @@ resource "aws_iam_instance_profile" "nginx" {
 }
 
 resource "aws_instance" "nginx" {
-  ami                         = data.aws_ami.amazon_linux_arm.id
+  ami                         = var.ami_id
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [aws_security_group.nginx.id]

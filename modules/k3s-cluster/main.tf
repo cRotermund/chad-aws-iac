@@ -177,23 +177,6 @@ resource "aws_iam_role_policy" "k3s_ssm_access" {
 # k3s server instance 
 #############################################
 
-data "aws_ami" "amazon_linux_arm" {
-  owners      = ["amazon"]
-  most_recent = true
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*arm64"]
-  }
-  filter {
-    name   = "architecture"
-    values = ["arm64"]
-  }
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
-}
-
 data "aws_eip" "server" {
   count = var.server_eip_allocation_id != "" ? 1 : 0
   id    = var.server_eip_allocation_id
@@ -212,7 +195,7 @@ locals {
 }
 
 resource "aws_instance" "server" {
-  ami                         = data.aws_ami.amazon_linux_arm.id
+  ami                         = var.ami_id
   instance_type               = var.server_instance_type
   subnet_id                   = local.server_subnet_id
   vpc_security_group_ids      = [aws_security_group.k3s.id]
@@ -248,7 +231,7 @@ locals {
 }
 
 resource "aws_instance" "agent" {
-  ami                         = data.aws_ami.amazon_linux_arm.id
+  ami                         = var.ami_id
   instance_type               = var.agent_instance_type
   subnet_id                   = local.agent_subnet_id
   vpc_security_group_ids      = [aws_security_group.k3s.id]

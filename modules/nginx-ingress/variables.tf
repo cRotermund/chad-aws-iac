@@ -14,6 +14,12 @@ variable "instance_type" {
   default     = "t4g.micro"
 }
 
+variable "ami_id" {
+  description = "AMI ID for the nginx ingress node (Amazon Linux 2023 arm64). Pinned so routine AMI releases do not replace the running node; update deliberately."
+  type        = string
+  default     = "ami-05ec9e26a9c82817a"
+}
+
 variable "eip_allocation_id" {
   description = "Existing Elastic IP allocation ID to attach to nginx instance (required for static IP)"
   type        = string

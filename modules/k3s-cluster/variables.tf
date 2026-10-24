@@ -14,6 +14,12 @@ variable "agent_instance_type" {
   type = string
 }
 
+variable "ami_id" {
+  description = "AMI ID for K3s server and agent nodes (Amazon Linux 2023 arm64). Pinned so routine AMI releases do not replace running nodes; update deliberately."
+  type        = string
+  default     = "ami-05ec9e26a9c82817a"
+}
+
 variable "server_eip_allocation_id" {
   type    = string
   default = ""
