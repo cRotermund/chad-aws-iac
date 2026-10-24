@@ -98,12 +98,17 @@ resource "aws_vpc_security_group_egress_rule" "all" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+resource "aws_key_pair" "game" {
+  key_name   = "game-servers"
+  public_key = var.ssh_public_key
+}
+
 resource "aws_instance" "satisfactory" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.satisfactory.id]
-  key_name               = var.key_name
+  key_name               = aws_key_pair.game.key_name
 
   # Matches the state AWS reports for the running instance, which has a public
   # address from the EIP. Setting false here forces replacement of the instance.

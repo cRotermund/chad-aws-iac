@@ -44,10 +44,9 @@ variable "ami_id" {
   default     = "ami-0bd74f3706bb4acb8"
 }
 
-variable "key_name" {
-  description = "Existing EC2 key pair name for SSH access"
+variable "ssh_public_key" {
+  description = "OpenSSH public key for the game server key pair. Generate the private key locally (ssh-keygen -t ed25519) and keep it out of the repo."
   type        = string
-  default     = "admin-us-east-1"
 }
 
 variable "ssh_allowed_cidrs" {
