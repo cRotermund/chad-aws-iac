@@ -44,9 +44,10 @@ variable "ami_id" {
   default     = "ami-0bd74f3706bb4acb8"
 }
 
-variable "ssh_public_key" {
-  description = "OpenSSH public key for the game server key pair. Generate the private key locally (ssh-keygen -t ed25519) and keep it out of the repo."
+variable "key_name" {
+  description = "Name of an existing EC2 key pair for SSH access. The key pair is created outside Terraform (aws ec2 create-key-pair) and the private key is stored in ~/.ssh, matching the homelab SOP."
   type        = string
+  default     = "chad-game-servers"
 }
 
 variable "ssh_allowed_cidrs" {

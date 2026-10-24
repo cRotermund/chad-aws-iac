@@ -1,8 +1,8 @@
 # Copy to terraform.tfvars (gitignored) and set your values.
 
-# Generate the key locally, then paste the PUBLIC key here:
-#   ssh-keygen -t ed25519 -C game-servers -f ~/.ssh/chad-game-servers.pem
-ssh_public_key = "ssh-ed25519 AAAA... game-servers"
+# SSH key pair: created in AWS with `aws ec2 create-key-pair` (RSA, PEM) and saved to
+# ~/.ssh/chad-game-servers.pem (chmod 600). Same SOP as the homelab key.
+key_name = "chad-game-servers"
 
 # Your workstation IP as a /32 for SSH access.
 ssh_allowed_cidrs = ["203.0.113.10/32"]

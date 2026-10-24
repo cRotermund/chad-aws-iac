@@ -185,6 +185,13 @@ After cloning this repository on a new machine:
    chmod 600 ~/.ssh/chad-k3s.pem
    ```
 
+   **Key pair SOP (applies to every stack):** key pairs are created in AWS with the CLI and referenced by name (`key_name`); Terraform does not manage them. The private key is saved once as `~/.ssh/<key-name>.pem` with `chmod 600`. Create one with:
+   ```bash
+   aws ec2 create-key-pair --key-name <key-name> --key-type rsa --key-format pem --query KeyMaterial --output text > ~/.ssh/<key-name>.pem
+   chmod 600 ~/.ssh/<key-name>.pem
+   ```
+   The game server uses `chad-game-servers`. The homelab uses `chad-k3s`.
+
 4. **Initialize Terraform:**
    ```bash
    terraform init -backend-config=backend.hcl
