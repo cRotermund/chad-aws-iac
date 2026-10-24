@@ -63,9 +63,9 @@ variable "game_port" {
 }
 
 variable "root_volume_size_gb" {
-  description = "Root EBS volume size in GiB (gp3). Pending decision; see ADR 009 cost notes."
+  description = "Root EBS volume size in GiB (gp3). 16 GiB is the minimum-cost choice; see ADR 009."
   type        = number
-  default     = 30
+  default     = 16
 }
 
 variable "eip_allocation_id" {

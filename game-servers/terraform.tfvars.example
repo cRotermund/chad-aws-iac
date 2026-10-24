@@ -7,5 +7,5 @@ ssh_allowed_cidrs = ["203.0.113.10/32"]
 eip_allocation_id = "eipalloc-0440bfb93a0c4ce6d"
 
 # Optional overrides:
-# root_volume_size_gb = 30
+# root_volume_size_gb = 16
 # instance_type       = "m6a.xlarge"
