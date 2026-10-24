@@ -20,9 +20,11 @@ in the `game-servers` stack, rather than as a workload on the K3s cluster.
 - **Instance type:** `m6a.xlarge` (4 vCPU, 16 GiB, AMD EPYC, x86_64,
   non-burstable). Satisfactory ships x86_64 binaries, so Graviton (ARM)
   instances are excluded without emulation.
-- **Operating system:** Debian 13 (`debian-13-amd64`), selected with an
-  `aws_ami` data source filtered by Debian's owner ID (`136693071363`) and name
-  pattern, so the AMI resolves to the latest image rather than a hardcoded ID.
+- **Operating system:** Debian 13 (`debian-13-amd64`), pinned to a specific AMI
+  ID (`ami-0bd74f3706bb4acb8`, from Debian's owner ID `136693071363`). Upgrades
+  are deliberate: a new AMI ID is set in Terraform and applied explicitly. The
+  image is not looked up dynamically, so a routine Debian release cannot replace
+  a running server.
 - **Storage:** Root EBS volume only. Game save data lives on the root volume.
   Data is recreated, not preserved, during the rebuild.
 - **Metadata:** IMDSv2 required.
@@ -44,13 +46,13 @@ stack. An Auto Scaling group is not required for the current use case.
   of the homelab cluster.
 - **Positive:** `m6a.xlarge` is a non-burstable instance with consistent CPU
   performance, versus the burstable `t2.xlarge` it replaces.
-- **Positive:** Using a data source for the AMI keeps the image current without
-  manual updates.
+- **Positive:** Pinning the AMI keeps routine image releases from replacing a
+  running server. Upgrades are an explicit, reviewable change.
 - **Negative:** No automatic recovery beyond EC2 instance recovery; the server
   is a single point of failure.
 - **Negative:** Debian 13 patching and game updates are manual or must be
   handled by provisioning scripts.
-- **Negative:** Resolving the AMI at plan time means an OS image update can
-  replace the instance on the next apply unless `ignore_changes` is set on the
-  AMI attribute. This must be decided before the first apply.
+- **Negative:** Moving to a newer AMI is a manual step. Setting a new AMI ID in
+  Terraform replaces the instance, so the root volume and any save data on it
+  are lost unless backed up first.
 </content>
