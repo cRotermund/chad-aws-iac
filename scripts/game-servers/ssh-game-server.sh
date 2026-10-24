@@ -7,7 +7,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR/game-servers"
 
 SERVER_IP="$(terraform output -raw satisfactory_public_ip)"
-KEY_FILE="${GAME_SERVER_KEY_FILE:-${HOME}/.ssh/game-servers-ed25519}"
+KEY_FILE="${GAME_SERVER_KEY_FILE:-${HOME}/.ssh/chad-game-servers.pem}"
 SSH_USER="${GAME_SERVER_SSH_USER:-admin}"
 
 echo "Connecting to game server at $SERVER_IP as $SSH_USER..."

@@ -31,7 +31,7 @@ Therefore:
 ### Accessing kubectl on the agent (optional)
 Copy kubeconfig from server (adjust IP and key path):
 ```bash
-scp -i ~/chad-k3s.pem ec2-user@<server_public_ip>:/etc/rancher/k3s/k3s.yaml ~/k3s.yaml
+scp -i ~/.ssh/chad-k3s.pem ec2-user@<server_public_ip>:/etc/rancher/k3s/k3s.yaml ~/k3s.yaml
 chmod 600 ~/k3s.yaml
 export KUBECONFIG=~/k3s.yaml
 kubectl get nodes

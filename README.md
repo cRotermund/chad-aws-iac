@@ -180,9 +180,9 @@ After cloning this repository on a new machine:
    This exports `AWS_PROFILE` and `AWS_REGION` so you don't need to specify them in every command.
 
 3. **Ensure you have the SSH key:**
-   The EC2 key pair private key (`chad-k3s.pem`) is not stored in AWS. You'll need to obtain it through your secure distribution method (1Password, secure file share, etc.) and place it at `~/chad-k3s.pem` with proper permissions:
+   The EC2 key pair private key (`chad-k3s.pem`) is not stored in AWS. You'll need to obtain it through your secure distribution method (1Password, secure file share, etc.) and place it at `~/.ssh/chad-k3s.pem` with proper permissions:
    ```bash
-   chmod 600 ~/chad-k3s.pem
+   chmod 600 ~/.ssh/chad-k3s.pem
    ```
 
 4. **Initialize Terraform:**
