@@ -3,8 +3,8 @@ set -uo pipefail
 
 # Read-only infrastructure health check for the k3s, ArgoCD, and nginx stack.
 # This script intentionally does not retrieve or print credentials or secrets.
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR/homelab"
 
 PROFILE="${AWS_PROFILE:-terraform-iac}"
 HTTP_TIMEOUT="${HEALTHCHECK_HTTP_TIMEOUT:-10}"

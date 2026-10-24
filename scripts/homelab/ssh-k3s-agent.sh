@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # SSH into the K3s agent node
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR/homelab"
 
 AGENT_IP=$(terraform output -raw k3s_agent_public_ip)
 KEY_FILE="${HOME}/chad-k3s.pem"

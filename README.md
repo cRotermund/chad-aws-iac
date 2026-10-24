@@ -97,10 +97,12 @@ Edit `aws-config` if you need to change region (default is `us-east-1`).
 
 ### 2. Configure Terraform Backend
 
+Homelab Terraform lives in `homelab/`. Run all Terraform commands from that directory (`cd homelab`).
+
 Copy the backend config template and fill in your S3 bucket details:
 
 ```bash
-cp backend.hcl.example backend.hcl
+cp backend.hcl.example homelab/backend.hcl
 ```
 
 Edit `backend.hcl` with your actual S3 bucket name and region:
@@ -122,10 +124,10 @@ terraform init -backend-config=backend.hcl
 Copy the variables template and provide your infrastructure IDs:
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
+cp terraform.tfvars.example homelab/terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and set:
+Edit `homelab/terraform.tfvars` and set:
 - `vpc_id`: Your existing VPC ID
 - `public_subnet_ids`: List of 2+ public subnet IDs (must have internet access)
 - `key_name`: Your EC2 key pair name (optional, for SSH access)
@@ -215,7 +217,7 @@ The `scripts/` directory contains convenient helper scripts:
 Run the read-only infrastructure health check from the repository root:
 
 ```bash
-./scripts/healthcheck-infra.sh
+./scripts/homelab/healthcheck-infra.sh
 ```
 
 The script checks AWS instance state and status, Kubernetes API request serving
@@ -226,7 +228,7 @@ fails.
 Run the OIDC federation test after applying the IAM provider and test role:
 
 ```bash
-./scripts/test-oidc.sh
+./scripts/homelab/test-oidc.sh
 ```
 
 The test verifies that the trusted `default/aws-test` service account can assume
@@ -241,7 +243,7 @@ untouched.
 Fetch the kubeconfig from SSM and set `KUBECONFIG` in the current shell:
 
 ```bash
-source ./scripts/use-kubeconfig.sh
+source ./scripts/homelab/use-kubeconfig.sh
 ```
 
 The wrapper must be sourced because a standalone script runs in a child shell and
@@ -264,13 +266,13 @@ kubectl get nodes
 **Stop instances when not in use** (you only pay for EBS storage when stopped):
 
 ```bash
-./scripts/stop-cluster.sh
+./scripts/homelab/stop-cluster.sh
 ```
 
 **Start instances when needed:**
 
 ```bash
-./scripts/start-cluster.sh
+./scripts/homelab/start-cluster.sh
 ```
 
 **Note:** The scripts manage K3s nodes and the nginx ingress node. All three instances are stopped/started together.
@@ -282,9 +284,9 @@ The kubeconfig remains valid across restarts if using an Elastic IP. Otherwise, 
 If you configured `key_name` and `ssh_allowed_cidrs`:
 
 Convenience scripts are provided for quick SSH access (see [Helper Scripts](#helper-scripts)):
-- `./scripts/ssh-k3s-server.sh` — SSH into the K3s server node
-- `./scripts/ssh-k3s-agent.sh` — SSH into the K3s agent node
-- `./scripts/ssh-nginx.sh` — SSH into the nginx ingress node
+- `./scripts/homelab/ssh-k3s-server.sh` — SSH into the K3s server node
+- `./scripts/homelab/ssh-k3s-agent.sh` — SSH into the K3s agent node
+- `./scripts/homelab/ssh-nginx.sh` — SSH into the nginx ingress node
 
 Or use manual commands:
 
@@ -309,7 +311,7 @@ sudo journalctl -u k3s-agent -f  # On agent
 
 The nginx ingress node provides a dedicated load balancer with the static IP. TLS is terminated on nginx for `apis.rotorlabs.io`, `admin.rotorlabs.io`, and `apps.rotorlabs.io`.
 
-TLS certificate generation, validation, SSM deployment, renewal, rollback, and troubleshooting are documented in the [rotorlabs SSL certificate SOP](docs/sops/ssl/rotorlabs/README.md). Use `scripts/rotate-nginx-tls.sh` for certificate deployment and rotation rather than replacing the Nginx instance.
+TLS certificate generation, validation, SSM deployment, renewal, rollback, and troubleshooting are documented in the [rotorlabs SSL certificate SOP](docs/sops/ssl/rotorlabs/README.md). Use `scripts/homelab/rotate-nginx-tls.sh` for certificate deployment and rotation rather than replacing the Nginx instance.
 
 **Access your cluster:**
 ```bash
@@ -359,7 +361,7 @@ ArgoCD is automatically installed on the K3s server during first boot for GitOps
 ```bash
 # Ensure DNS points admin.rotorlabs.io to the nginx server's Elastic IP
 # Get the admin password
-./scripts/get-argocd-password.sh
+./scripts/homelab/get-argocd-password.sh
 
 # Open in browser
 https://admin.rotorlabs.io/argocd

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Fetch ArgoCD admin password from SSM and display it.
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR/homelab"
 
 echo "Fetching ArgoCD admin password..."
 terraform output -raw argocd_admin_password

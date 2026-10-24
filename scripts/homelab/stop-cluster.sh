@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Stops k3s and nginx EC2 instances using Terraform outputs.
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR/homelab"
 SERVER_ID=$(terraform output -raw k3s_server_instance_id)
 AGENT_ID=$(terraform output -raw k3s_agent_instance_id)
 NGINX_ID=$(terraform output -raw nginx_instance_id)

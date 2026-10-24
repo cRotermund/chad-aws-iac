@@ -2,8 +2,8 @@
 set -uo pipefail
 
 # Exercise K3s-to-AWS web-identity federation and clean up temporary resources.
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR/homelab"
 
 PROFILE="${AWS_PROFILE:-terraform-iac}"
 KUBECONFIG_FILE="${KUBECONFIG:-$ROOT_DIR/kubeconfig.yaml}"
