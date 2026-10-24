@@ -106,6 +106,29 @@ Formatting is required before validation, planning, review, and commit. Do not
 manually reformat Terraform files in a way that causes `terraform fmt -check
 -recursive` to fail.
 
+## Version Pinning
+
+Prefer pinning versioned resources wherever the tool supports it. Avoid floating
+versions, where a value silently changes between runs, unless there is a
+documented reason.
+
+- **Terraform:** Pin `required_version` to an exact version. Do not use `>=`
+  or `~>` ranges.
+- **Providers:** Pin provider versions exactly, and commit the generated
+  `.terraform.lock.hcl`.
+- **Module sources:** Pin any remote module to a tag, commit, or exact version.
+  Local modules are versioned with the repository.
+- **Images and AMIs:** Pin AMI IDs and container images to an explicit ID, tag,
+  or digest. Do not look up `most_recent` images in Terraform.
+- **Software on hosts:** Pin package and binary versions in user data and
+  scripts where the installer supports it (for example, the K3s version).
+- **Charts, actions, and tooling:** Pin Helm charts, GitHub Actions, and CLI
+  tools to exact versions or commit SHAs.
+
+Upgrades are deliberate changes. Make a version bump in its own commit, reference
+the issue, and review the `terraform plan` output before applying. Do not
+combine a version bump with an unrelated change.
+
 ## Pull Requests
 
 - Use a semantic commit-style title and include the related issue reference.
