@@ -67,7 +67,8 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 │   └── backend.hcl               # Backend config for this stack (gitignored)
 └── scripts/
     ├── init.sh                   # Shared: AWS environment setup (source it)
-    └── homelab/                  # Homelab operations: kubeconfig, SSH, start/stop, health checks
+    ├── homelab/                  # Homelab operations: kubeconfig, SSH, start/stop, health checks
+    └── game-servers/             # Game server health check (read-only)
 ```
 
 ## Initial Setup
