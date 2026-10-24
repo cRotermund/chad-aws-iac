@@ -78,3 +78,9 @@ variable "eip_allocation_id" {
   description = "Existing Elastic IP allocation ID for the game server. Managed outside Terraform (never created or released here), matching the homelab."
   type        = string
 }
+
+variable "satisfactory_app_id" {
+  description = "Steam app ID for the Satisfactory dedicated server (1690800 is the public, non-experimental branch)."
+  type        = number
+  default     = 1690800
+}

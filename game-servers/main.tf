@@ -109,6 +109,15 @@ resource "aws_instance" "satisfactory" {
   # address from the EIP. Setting false here forces replacement of the instance.
   associate_public_ip_address = true
 
+  # The bootstrap runs once at first boot. Changing the script or any pinned input
+  # replaces the instance, so the root volume and any save data on it are lost.
+  user_data = templatefile("${path.module}/user_data/satisfactory.sh.tftpl", {
+    satisfactory_app_id = var.satisfactory_app_id
+    game_port           = var.game_port
+    reliable_port       = var.reliable_port
+  })
+  user_data_replace_on_change = true
+
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
