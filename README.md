@@ -419,7 +419,7 @@ argocd account update-password --current-password $(terraform output -raw argocd
 
 ## Key Features & Design Decisions
 
-Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
+Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/README.md). See the [ADR index](docs/adrs/README.md) for the full list and status.
 
 | ADR | Decision |
 |-----|----------|
@@ -428,6 +428,10 @@ Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/):
 | [003](docs/adrs/003-nginx-self-managed-ingress.md) | Self-managed nginx as ingress over managed load balancers |
 | [004](docs/adrs/004-network-security-model.md) | Two-security-group network model |
 | [005](docs/adrs/005-kubernetes-runtime-secrets.md) | External Secrets Operator for Kubernetes runtime secrets |
+| [006](docs/adrs/006-kubernetes-api-ingress.md) | Restricted external Kubernetes API access |
+| [007](docs/adrs/007-game-server-network-isolation.md) | Game server network isolation (separate VPC) |
+| [008](docs/adrs/008-game-server-stack-separation.md) | Separate Terraform stacks for homelab and game servers |
+| [009](docs/adrs/009-game-server-compute-platform.md) | Game server compute platform (single EC2 instance) |
 
 ### Implementation Details
 

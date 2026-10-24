@@ -1,4 +1,4 @@
-# ADR 003: Allow Restricted External Kubernetes API Access
+# ADR 006: Allow Restricted External Kubernetes API Access
 
 - **Status:** Accepted
 - **Date:** 2026-09
