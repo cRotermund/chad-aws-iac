@@ -62,6 +62,12 @@ variable "game_port" {
   default     = 7777
 }
 
+variable "reliable_port" {
+  description = "Satisfactory reliable messaging port (TCP), opened from the internet. Without it, players stall on the loading screen (wiki: Dedicated servers, patch 1.1.0.0+)."
+  type        = number
+  default     = 8888
+}
+
 variable "root_volume_size_gb" {
   description = "Root EBS volume size in GiB (gp3). 16 GiB is the minimum-cost choice; see ADR 009."
   type        = number

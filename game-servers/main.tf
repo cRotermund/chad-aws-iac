@@ -72,6 +72,15 @@ resource "aws_vpc_security_group_ingress_rule" "game" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "reliable" {
+  security_group_id = aws_security_group.satisfactory.id
+  description       = "Satisfactory reliable messaging (tcp)"
+  from_port         = var.reliable_port
+  to_port           = var.reliable_port
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
   for_each          = toset(var.ssh_allowed_cidrs)
   security_group_id = aws_security_group.satisfactory.id
@@ -96,8 +105,9 @@ resource "aws_instance" "satisfactory" {
   vpc_security_group_ids = [aws_security_group.satisfactory.id]
   key_name               = var.key_name
 
-  # Public address comes from the Terraform-owned Elastic IP below.
-  associate_public_ip_address = false
+  # Matches the state AWS reports for the running instance, which has a public
+  # address from the EIP. Setting false here forces replacement of the instance.
+  associate_public_ip_address = true
 
   metadata_options {
     http_endpoint               = "enabled"
