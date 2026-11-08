@@ -70,6 +70,18 @@ resource "aws_security_group_rule" "nginx_to_nodeports" {
   description              = "Allow nginx ingress to reach K3s NodePorts"
 }
 
+# Allow nginx to proxy HTTP to the bundled Traefik ingress controller on port 80.
+resource "aws_security_group_rule" "nginx_to_traefik_http" {
+  count                    = var.create_nginx_nodeport_rule ? 1 : 0
+  type                     = "ingress"
+  security_group_id        = aws_security_group.k3s.id
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = var.nginx_security_group_id
+  description              = "Allow nginx to reach the Traefik ingress controller"
+}
+
 # Allow nginx to proxy the public OIDC endpoints to the Kubernetes API server.
 resource "aws_security_group_rule" "nginx_to_kubernetes_api" {
   count                    = var.create_nginx_nodeport_rule ? 1 : 0
