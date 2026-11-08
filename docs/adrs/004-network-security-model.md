@@ -20,6 +20,7 @@ Use a **two-security-group model** with targeted rules:
 1. **K3s security group** (`k3s-cluster-sg`):
    - Self-referencing rule: all traffic between members of the SG (server ↔ agent ↔ all cluster pods)
    - Ingress from nginx SG: TCP 30000-32767 (K3s NodePort range) for service exposure
+   - Ingress from nginx SG: TCP 80 (bundled Traefik ingress) for application hosts routed to `k3s_backend`, and TCP 6443 (Kubernetes API) for the public OIDC discovery endpoints
    - Ingress from operator CIDRs: TCP 22 (SSH)
    - Egress: all outbound (for package updates and image pulls)
 
