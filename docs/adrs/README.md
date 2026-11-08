@@ -15,6 +15,7 @@ Alternatives Considered, and Consequences.
 | [007](007-game-server-network-isolation.md) | Game Server Network Isolation | Proposed | 2026-10 |
 | [008](008-game-server-stack-separation.md) | Separate Terraform Stacks for Homelab and Game Servers | Proposed | 2026-10 |
 | [009](009-game-server-compute-platform.md) | Game Server Compute Platform | Proposed | 2026-10 |
+| [010](010-application-stacks.md) | Per-Application Terraform Stacks | Proposed | 2026-11 |
 
 ## Adding an ADR
 

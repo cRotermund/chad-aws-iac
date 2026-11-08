@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (gitignored) and set your values.
+
+# Globally unique S3 bucket name.
+bucket_name = "REPLACE_WITH_UNIQUE_BUCKET_NAME"
+
+# Optional overrides:
+# role_name                 = "paprika-mcp"
+# service_account_namespace = "chad-applications"
+# service_account_name      = "paprika-mcp-go"
+# snapshot_key              = "paprika-mcp-go/recipe-index.json.gz"

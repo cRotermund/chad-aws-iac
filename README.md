@@ -60,6 +60,8 @@ Internet → nginx (Static EIP) → K3s Server (private) ← K3s Agent
 │   └── modules/
 │       ├── k3s-cluster/          # K3s server and agent nodes
 │       └── nginx-ingress/        # nginx ingress node and EIP association
+├── apps/                         # One stack per homelab application
+│   └── paprika-mcp/              # Paprika MCP server: S3 bucket + OIDC-assumable IAM role
 ├── game-servers/                 # Game server stack: VPC, Satisfactory server, EIP
 │   ├── main.tf, variables.tf, outputs.tf, providers.tf, backend.tf
 │   ├── terraform.tfvars.example  # Template for terraform.tfvars (gitignored)
@@ -438,6 +440,7 @@ Architectural decisions are documented as ADRs in [`docs/adrs/`](docs/adrs/READM
 | [007](docs/adrs/007-game-server-network-isolation.md) | Game server network isolation (separate VPC) |
 | [008](docs/adrs/008-game-server-stack-separation.md) | Separate Terraform stacks for homelab and game servers |
 | [009](docs/adrs/009-game-server-compute-platform.md) | Game server compute platform (single EC2 instance) |
+| [010](docs/adrs/010-application-stacks.md) | Per-application Terraform stacks under `apps/` |
 
 ### Implementation Details
 
